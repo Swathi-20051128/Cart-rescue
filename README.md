@@ -1,4 +1,4 @@
-# CartGuard AI 🛒🛡️
+# CAIG #
 
 <div align="center">
 
