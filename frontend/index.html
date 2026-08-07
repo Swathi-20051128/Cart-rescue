@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CartGuard AI — Browser SDK Demo</title>
+  <meta name="description" content="CartGuard AI real-time cart abandonment prevention with behavioral tracking" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-dark: #080c18;
+      --bg-card: rgba(255,255,255,0.04);
+      --border: rgba(102,126,234,0.25);
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --success: #2ed573;
+      --warning: #ffa502;
+      --danger: #ff4757;
+      --text: #e8eaf0;
+      --text-muted: #8892a4;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated gradient background */
+    body::before {
+      content: '';
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(102,126,234,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(118,75,162,0.08) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* Header */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,12,24,0.9);
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 20px; font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-icon { font-size: 28px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-radius: 20px;
+      background: rgba(46,213,115,0.1); border: 1px solid rgba(46,213,115,0.3);
+      font-size: 13px; color: var(--success); font-weight: 500;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center; padding: 80px 0 60px;
+    }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 800; line-height: 1.1;
+      background: linear-gradient(135deg, #fff 40%, var(--primary) 70%, var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 20px;
+    }
+    .hero p {
+      font-size: 18px; color: var(--text-muted);
+      max-width: 600px; margin: 0 auto 40px; line-height: 1.7;
+    }
+    .hero-cta {
+      display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    }
+    .btn-primary {
+      padding: 14px 32px; border-radius: 12px; border: none; cursor: pointer;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white; font-size: 16px; font-weight: 600;
+      transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(102,126,234,0.4); }
+    .btn-secondary {
+      padding: 14px 32px; border-radius: 12px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text); font-size: 16px; font-weight: 600; cursor: pointer;
+      transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-secondary:hover { border-color: var(--primary); background: rgba(102,126,234,0.1); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 48px;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; text-align: center;
+      transition: all 0.3s;
+    }
+    .stat-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+    .stat-value { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+    .stat-label { font-size: 13px; color: var(--text-muted); }
+    .stat-primary { color: var(--primary); }
+    .stat-success { color: var(--success); }
+    .stat-warning { color: var(--warning); }
+    .stat-danger { color: var(--danger); }
+
+    /* Main grid */
+    .main-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 700; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Session simulator */
+    .sim-controls { display: flex; flex-direction: column; gap: 14px; }
+    .sim-row { display: flex; align-items: center; gap: 12px; }
+    .sim-label { font-size: 13px; color: var(--text-muted); min-width: 160px; }
+    .sim-input {
+      flex: 1; padding: 8px 12px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: var(--text); font-size: 14px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .sim-input:focus { border-color: var(--primary); }
+    .sim-slider { flex: 1; accent-color: var(--primary); }
+
+    /* Risk gauge */
+    .risk-gauge-container { text-align: center; padding: 20px 0; }
+    .gauge-ring {
+      width: 180px; height: 180px; border-radius: 50%;
+      background: conic-gradient(var(--primary) 0% var(--risk-pct, 0%), rgba(255,255,255,0.05) var(--risk-pct, 0%) 100%);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      transition: all 0.6s ease;
+      position: relative;
+    }
+    .gauge-inner {
+      width: 140px; height: 140px; border-radius: 50%;
+      background: #0d1224;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .gauge-value { font-size: 36px; font-weight: 800; }
+    .gauge-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .risk-level-badge {
+      display: inline-block; padding: 6px 20px; border-radius: 20px;
+      font-weight: 700; font-size: 14px; margin-bottom: 16px;
+    }
+
+    /* Action card */
+    .action-card {
+      border-radius: 12px; padding: 20px; margin-top: 16px;
+      border: 1px solid;
+      transition: all 0.4s;
+    }
+    .action-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+    .action-message {
+      font-size: 14px; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .action-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .tag {
+      padding: 4px 10px; border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      font-size: 12px; font-weight: 500;
+    }
+
+    /* Agent pipeline */
+    .pipeline { display: flex; flex-direction: column; gap: 8px; }
+    .agent-step {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-radius: 10px; background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.3s;
+    }
+    .agent-step.active { border-color: var(--primary); background: rgba(102,126,234,0.08); }
+    .agent-step.done { border-color: rgba(46,213,115,0.3); background: rgba(46,213,115,0.05); }
+    .agent-icon { font-size: 20px; width: 32px; text-align: center; }
+    .agent-name { font-weight: 600; font-size: 14px; flex: 1; }
+    .agent-latency { font-size: 12px; color: var(--text-muted); }
+    .agent-status { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.2); }
+    .agent-status.active { background: var(--warning); animation: pulse 0.8s infinite; }
+    .agent-status.done { background: var(--success); }
+
+    /* Signals grid */
+    .signals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .signal-item { }
+    .signal-name { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .signal-bar-bg { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); }
+    .signal-bar { height: 6px; border-radius: 3px; transition: width 0.6s ease; }
+    .signal-value { font-size: 12px; font-weight: 600; margin-top: 3px; text-align: right; }
+
+    /* Live events */
+    .events-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .event-item {
+      display: flex; gap: 10px; padding: 8px 12px;
+      border-radius: 8px; background: rgba(255,255,255,0.03);
+      font-size: 13px; animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; } }
+    .event-time { color: var(--text-muted); min-width: 60px; }
+    .event-type { color: var(--primary); font-weight: 500; min-width: 80px; }
+
+    /* Architecture diagram */
+    .arch-diagram { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; }
+    .arch-flow { display: flex; flex-direction: column; gap: 4px; }
+    .arch-step {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 8px;
+      font-size: 13px;
+    }
+    .arch-arrow { color: var(--primary); font-weight: 700; }
+
+    /* Scenarios */
+    .scenarios-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+    .scenario-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; cursor: pointer;
+      transition: all 0.3s;
+    }
+    .scenario-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+    .scenario-card.selected { border-color: var(--primary); background: rgba(102,126,234,0.1); }
+    .scenario-name { font-weight: 700; margin-bottom: 6px; }
+    .scenario-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .scenario-expected { margin-top: 10px; font-size: 12px; }
+
+    /* Footer */
+    footer {
+      text-align: center; padding: 40px 0;
+      color: var(--text-muted); font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .scenarios-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🛒</span>
+        CartGuard AI
+      </div>
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="connectionStatus">Connecting...</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>AI-Powered<br/>Cart Rescue</h1>
+    <p>Real-time abandonment risk scoring with multi-agent LLM reasoning. Not every abandoner needs a discount — and we prove it.</p>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="runScenario('payment_failure')">
+        ▶ Run Live Demo
+      </button>
+      <a href="http://localhost:8501" class="btn-secondary" target="_blank">
+        📊 Full Dashboard
+      </a>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value stat-primary" id="statTotalSessions">0</div>
+      <div class="stat-label">Sessions Scored</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value stat-success" id="statDoNothing">0%</div>
+      <div class="stat-label">DO NOTHING Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value stat-warning" id="statAvgLatency">0ms</div>
+      <div class="stat-label">Avg Latency</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value stat-danger" id="statDiscountSaved">₹0</div>
+      <div class="stat-label">Discount Saved vs Blanket</div>
+    </div>
+  </div>
+
+  <!-- Scenarios -->
+  <h2 style="font-size:20px;font-weight:700;margin-bottom:16px;">🎭 Demo Scenarios</h2>
+  <div class="scenarios-grid">
+    <div class="scenario-card" onclick="runScenario('payment_failure')" id="sc_payment_failure">
+      <div class="scenario-name">💳 Payment Failure</div>
+      <div class="scenario-desc">Failed UPI, hesitation, high cart value, 3 product re-views</div>
+      <div class="scenario-expected">Expected: <strong>ALTERNATE_PAYMENT_GUIDANCE</strong></div>
+    </div>
+    <div class="scenario-card" onclick="runScenario('comparison_shopping')" id="sc_comparison_shopping">
+      <div class="scenario-name">🔍 Comparison Shopping</div>
+      <div class="scenario-desc">5 product views, 3 category switches, tab loss detected</div>
+      <div class="scenario-expected">Expected: <strong>SOCIAL_PROOF_NUDGE</strong></div>
+    </div>
+    <div class="scenario-card" onclick="runScenario('friction_abandonment')" id="sc_friction_abandonment">
+      <div class="scenario-name">😤 Checkout Friction</div>
+      <div class="scenario-desc">Slow scroll, form field back-and-forth, no payment attempt</div>
+      <div class="scenario-expected">Expected: <strong>CHECKOUT_ASSISTANCE</strong></div>
+    </div>
+    <div class="scenario-card" onclick="runScenario('mixed_signals')" id="sc_mixed_signals">
+      <div class="scenario-name">🤷 Mixed Signals</div>
+      <div class="scenario-desc">2 attempts (1 fail, 1 success), volatile cart value</div>
+      <div class="scenario-expected">Expected: <strong>DO_NOTHING</strong></div>
+    </div>
+    <div class="scenario-card" onclick="runScenario('low_intent')" id="sc_low_intent">
+      <div class="scenario-name">👀 Low Intent</div>
+      <div class="scenario-desc">10 product views, no cart adds, 15 min session, research mode</div>
+      <div class="scenario-expected">Expected: <strong>DO_NOTHING</strong></div>
+    </div>
+    <div class="scenario-card" onclick="runScenario('urgent_bargain_hunter')" id="sc_urgent_bargain_hunter">
+      <div class="scenario-name">⚡ Bargain Hunter</div>
+      <div class="scenario-desc">Added item 3 times, removed twice, price check pattern</div>
+      <div class="scenario-expected">Expected: <strong>LIMITED_OFFER</strong></div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Left: Risk Score -->
+    <div class="card">
+      <div class="card-title">⚡ Live Risk Score</div>
+      <div class="risk-gauge-container">
+        <div class="gauge-ring" id="gaugeRing" style="--risk-pct: 0%">
+          <div class="gauge-inner">
+            <div class="gauge-value" id="gaugeValue" style="color:#2ed573">0%</div>
+            <div class="gauge-label">Risk Score</div>
+          </div>
+        </div>
+        <div class="risk-level-badge" id="riskBadge" style="background:rgba(46,213,115,0.15);border-color:rgba(46,213,115,0.4);color:#2ed573">
+          LOW RISK
+        </div>
+        
+        <!-- Action result -->
+        <div class="action-card" id="actionCard" style="border-color:rgba(46,213,115,0.3);background:rgba(46,213,115,0.05);">
+          <div class="action-title" id="actionType">Waiting for session...</div>
+          <div class="action-message" id="actionMessage">Run a demo scenario above to see real-time AI scoring</div>
+          <div class="action-meta">
+            <span class="tag" id="actionChannel">Channel: -</span>
+            <span class="tag" id="actionDiscount">Discount: ₹0</span>
+            <span class="tag" id="actionSelfCheck">Self-Check: -</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Agent Pipeline -->
+    <div class="card">
+      <div class="card-title">🤖 Agent Pipeline</div>
+      <div class="pipeline" id="agentPipeline">
+        <div class="agent-step" id="step_signal">
+          <div class="agent-icon">📡</div>
+          <div class="agent-name">Signal Agent</div>
+          <div class="agent-latency" id="lat_signal">-</div>
+          <div class="agent-status" id="status_signal"></div>
+        </div>
+        <div class="agent-step" id="step_risk">
+          <div class="agent-icon">🎯</div>
+          <div class="agent-name">Risk Agent (ML Ensemble)</div>
+          <div class="agent-latency" id="lat_risk">-</div>
+          <div class="agent-status" id="status_risk"></div>
+        </div>
+        <div class="agent-step" id="step_diagnosis">
+          <div class="agent-icon">🩺</div>
+          <div class="agent-name">Diagnosis Agent (LLM)</div>
+          <div class="agent-latency" id="lat_diagnosis">-</div>
+          <div class="agent-status" id="status_diagnosis"></div>
+        </div>
+        <div class="agent-step" id="step_policy">
+          <div class="agent-icon">🛡️</div>
+          <div class="agent-name">Policy & Guardrail Agent</div>
+          <div class="agent-latency" id="lat_policy">-</div>
+          <div class="agent-status" id="status_policy"></div>
+        </div>
+        <div class="agent-step" id="step_action">
+          <div class="agent-icon">⚡</div>
+          <div class="agent-name">Action Agent (LLM)</div>
+          <div class="agent-latency" id="lat_action">-</div>
+          <div class="agent-status" id="status_action"></div>
+        </div>
+        <div class="agent-step" id="step_selfcheck">
+          <div class="agent-icon">✅</div>
+          <div class="agent-name">Self-Check Validator</div>
+          <div class="agent-latency" id="lat_selfcheck">-</div>
+          <div class="agent-status" id="status_selfcheck"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <div class="card-title" style="font-size:14px;">📊 Behavioral Signals</div>
+        <div class="signals-grid" id="signalsGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Live Events Log -->
+  <div class="card" style="margin-bottom:32px;">
+    <div class="card-title">📋 Live Event Stream</div>
+    <div class="events-list" id="eventsList">
+      <div class="event-item">
+        <span class="event-time">--:--:--</span>
+        <span class="event-type">SYSTEM</span>
+        <span>CartGuard AI initialized. Select a scenario to begin.</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>CartGuard AI v2.0 — Multi-Agent Cart Abandonment Prevention</p>
+    <p style="margin-top:8px;font-size:12px;">
+      Stack: FastAPI + CatBoost + XGBoost + Llama 3.2 + Streamlit | Cost: ~₹0.05/decision | Latency: &lt;300ms
+    </p>
+  </div>
+</footer>
+
+<script>
+const API_BASE = 'http://localhost:8000';
+let totalSessions = 0, doNothingCount = 0, totalLatency = 0, discountSaved = 0;
+
+// Connection check
+async function checkConnection() {
+  try {
+    const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      document.getElementById('connectionStatus').textContent = '✅ Backend Connected';
+    }
+  } catch {
+    document.getElementById('connectionStatus').textContent = '❌ Backend Offline';
+    document.getElementById('connectionStatus').style.color = '#ff4757';
+  }
+}
+checkConnection();
+
+// Scenario runner
+async function runScenario(name) {
+  // Highlight selected
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById(`sc_${name}`);
+  if (card) card.classList.add('selected');
+
+  logEvent('SCENARIO', `Starting: ${name}`);
+  resetPipeline();
+
+  try {
+    // Animate pipeline steps
+    const agents = ['signal', 'risk', 'diagnosis', 'policy', 'action', 'selfcheck'];
+    
+    // Start all as "loading"
+    agents.forEach(a => setAgentStatus(a, 'active'));
+
+    const start = Date.now();
+    const res = await fetch(`${API_BASE}/api/v1/demo/run/${name}`, { method: 'POST' });
+    const data = await res.json();
+    const elapsed = Date.now() - start;
+
+    const result = data.result;
+    
+    // Update agent statuses with latencies
+    const agentLatencies = result?.metrics?.agent_latencies || {};
+    const agentMap = {
+      signal: 'SignalAgent',
+      risk: 'RiskAgent',
+      diagnosis: 'DiagnosisAgent',
+      policy: 'PolicyAgent',
+      action: 'ActionAgent',
+      selfcheck: 'SelfCheckAgent',
+    };
+    agents.forEach(a => {
+      const lat = agentLatencies[agentMap[a]];
+      document.getElementById(`lat_${a}`).textContent = lat ? `${lat.toFixed(0)}ms` : '~';
+      setAgentStatus(a, 'done');
+    });
+
+    // Update risk gauge
+    const riskScore = result.risk_score || 0;
+    updateRiskGauge(riskScore, result.risk_level);
+
+    // Update action
+    const action = result.action || {};
+    updateActionCard(action, result);
+
+    // Update signals
+    updateSignals(result.signals || {});
+
+    // Update stats
+    totalSessions++;
+    totalLatency = (totalLatency * (totalSessions - 1) + elapsed) / totalSessions;
+    if (action.action_type === 'DO_NOTHING') doNothingCount++;
+    const blanket = (result.signals?.cart_value || 1000) * 0.10;
+    const actual = action.discount_amount || 0;
+    discountSaved += blanket - actual;
+
+    document.getElementById('statTotalSessions').textContent = totalSessions;
+    document.getElementById('statDoNothing').textContent = `${Math.round(doNothingCount/totalSessions*100)}%`;
+    document.getElementById('statAvgLatency').textContent = `${Math.round(totalLatency)}ms`;
+    document.getElementById('statDiscountSaved').textContent = `₹${Math.round(discountSaved)}`;
+
+    logEvent('RESULT', `${result.risk_level} risk | ${result.diagnosis?.root_cause} | → ${action.action_type}`);
+
+  } catch (err) {
+    logEvent('ERROR', `Backend not responding: ${err.message}`);
+    document.getElementById('actionType').textContent = '❌ Backend Offline';
+    document.getElementById('actionMessage').textContent = 'Start the backend: cd backend && python main.py';
+  }
+}
+
+function updateRiskGauge(score, level) {
+  const pct = Math.round(score * 100);
+  const el = document.getElementById('gaugeRing');
+  const valEl = document.getElementById('gaugeValue');
+  const badgeEl = document.getElementById('riskBadge');
+  
+  const colors = { HIGH: '#ff4757', MEDIUM: '#ffa502', LOW: '#2ed573' };
+  const color = colors[level] || '#667eea';
+  
+  el.style.background = `conic-gradient(${color} 0% ${pct}%, rgba(255,255,255,0.05) ${pct}% 100%)`;
+  valEl.textContent = `${pct}%`;
+  valEl.style.color = color;
+  
+  badgeEl.textContent = `${level} RISK`;
+  badgeEl.style.color = color;
+  badgeEl.style.background = `${color}1a`;
+  badgeEl.style.borderColor = `${color}66`;
+}
+
+function updateActionCard(action, result) {
+  const actionColors = {
+    DO_NOTHING: { bg: 'rgba(99,110,114,0.1)', border: 'rgba(99,110,114,0.3)', text: '#636e72' },
+    ALTERNATE_PAYMENT_GUIDANCE: { bg: 'rgba(9,132,227,0.1)', border: 'rgba(9,132,227,0.4)', text: '#0984e3' },
+    SOCIAL_PROOF_NUDGE: { bg: 'rgba(108,92,231,0.1)', border: 'rgba(108,92,231,0.4)', text: '#6c5ce7' },
+    CHECKOUT_ASSISTANCE: { bg: 'rgba(0,184,148,0.1)', border: 'rgba(0,184,148,0.4)', text: '#00b894' },
+    LIMITED_OFFER: { bg: 'rgba(225,112,85,0.1)', border: 'rgba(225,112,85,0.4)', text: '#e17055' },
+  };
+  
+  const style = actionColors[action.action_type] || actionColors.DO_NOTHING;
+  const card = document.getElementById('actionCard');
+  card.style.background = style.bg;
+  card.style.borderColor = style.border;
+  
+  document.getElementById('actionType').textContent = action.action_type || 'DO_NOTHING';
+  document.getElementById('actionType').style.color = style.text;
+  document.getElementById('actionMessage').textContent = action.message || 
+    (action.action_type === 'DO_NOTHING' ? '🚫 No action — this session has low uplift probability.' : '');
+  document.getElementById('actionChannel').textContent = `Channel: ${action.channel || 'N/A'}`;
+  document.getElementById('actionDiscount').textContent = `Discount: ₹${action.discount_amount || 0}`;
+  
+  const sc = result.self_check?.status;
+  document.getElementById('actionSelfCheck').textContent = `Self-Check: ${sc || '?'}`;
+  document.getElementById('actionSelfCheck').style.color = sc === 'PASSED' ? '#2ed573' : '#ff4757';
+}
+
+function updateSignals(signals) {
+  const signalDefs = [
+    { key: 'hesitation_score', label: 'Hesitation', color: '#ff4757' },
+    { key: 'price_sensitivity', label: 'Price Sensitivity', color: '#ffa502' },
+    { key: 'funnel_friction', label: 'Funnel Friction', color: '#fd9644' },
+    { key: 'comparison_intent', label: 'Comparison Intent', color: '#a55eea' },
+    { key: 'urgency_score', label: 'Urgency', color: '#2ed573' },
+    { key: 'payment_risk', label: 'Payment Risk', color: '#fc5c65' },
+  ];
+  
+  const grid = document.getElementById('signalsGrid');
+  grid.innerHTML = signalDefs.map(s => {
+    const val = signals[s.key] || 0;
+    const pct = (val * 100).toFixed(1);
+    return `
+      <div class="signal-item">
+        <div class="signal-name">${s.label}</div>
+        <div class="signal-bar-bg">
+          <div class="signal-bar" style="width:${pct}%;background:${s.color}"></div>
+        </div>
+        <div class="signal-value" style="color:${s.color}">${pct}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setAgentStatus(agent, status) {
+  const step = document.getElementById(`step_${agent}`);
+  const dot = document.getElementById(`status_${agent}`);
+  step.className = `agent-step ${status}`;
+  dot.className = `agent-status ${status}`;
+}
+
+function resetPipeline() {
+  ['signal','risk','diagnosis','policy','action','selfcheck'].forEach(a => {
+    setAgentStatus(a, '');
+    document.getElementById(`lat_${a}`).textContent = '-';
+  });
+}
+
+function logEvent(type, message) {
+  const list = document.getElementById('eventsList');
+  const now = new Date().toTimeString().slice(0,8);
+  const item = document.createElement('div');
+  item.className = 'event-item';
+  item.innerHTML = `<span class="event-time">${now}</span><span class="event-type">${type}</span><span>${message}</span>`;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 20) list.removeChild(list.lastChild);
+}
+</script>
+</body>
+</html>
