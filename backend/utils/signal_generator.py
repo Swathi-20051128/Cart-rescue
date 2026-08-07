@@ -2,6 +2,8 @@
 CartGuard AI - Synthetic Behavioral Signal Generator
 Derives micro-signals from available data to fill gaps in behavioral data.
 """
+from typing import Dict, Any, Optional
+
 try:
     import numpy as np
     import pandas as pd

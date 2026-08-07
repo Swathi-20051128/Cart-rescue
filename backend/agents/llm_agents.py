@@ -29,8 +29,13 @@ class CartGuardLLMAgent:
         self.cache = session_cache
         self.messages: List[Dict[str, Any]] = []
 
-    async def reason_async(self, context: Dict[str, Any], prompt_template: str) -> Dict[str, Any]:
-        """Execute chain-of-thought reasoning with caching and fallback handling."""
+    async def reason_async(self, context: Dict[str, Any], prompt_template: str, model_size: str = "small") -> Dict[str, Any]:
+        """Execute chain-of-thought reasoning with caching and fallback handling.
+
+        model_size: 'small' (cheap/fast, e.g. gpt-4o-mini) for routine per-agent
+        classification calls; 'large' (gpt-4o) reserved for genuinely ambiguous
+        cases escalated by the caller (e.g. SelfCheckValidator on borderline confidence).
+        """
         start_time = time.time()
 
         # Step 1: Check cache first (80% hit target)
@@ -49,7 +54,7 @@ class CartGuardLLMAgent:
         # Step 3: LLM Execution or Rule-Based Fallback
         try:
             from agents.orchestrator import llm_client
-            llm_res = await llm_client.complete(prompt, model_size="small")
+            llm_res = await llm_client.complete(prompt, model_size=model_size)
             text = llm_res.get("text", "")
             result = self._parse_response(text)
         except Exception:
@@ -207,7 +212,15 @@ class SelfCheckValidator(CartGuardLLMAgent):
 
     async def validate(self, diagnosis: Dict[str, Any], action: Dict[str, Any], policy: Dict[str, Any]) -> Dict[str, Any]:
         context = {**diagnosis, **action, **policy}
-        res = await self.reason_async(context, self.PROMPT_TEMPLATE)
+
+        # Two-tier model routing: only pay for the expensive model when the
+        # diagnosis confidence is genuinely borderline (0.45-0.65). Clear-cut
+        # high/low confidence cases stay on the cheap/fast model.
+        confidence = diagnosis.get("confidence", 0.5)
+        model_size = "large" if 0.45 <= confidence <= 0.65 else "small"
+
+        res = await self.reason_async(context, self.PROMPT_TEMPLATE, model_size=model_size)
+        res["escalated_to_large_model"] = (model_size == "large")
         if "is_valid" not in res:
             return fallback_engine.validate_self_check(diagnosis, action, policy)
         return res
