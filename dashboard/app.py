@@ -23,52 +23,112 @@ st.set_page_config(
 
 API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000")
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# ── Custom CSS (aligned to test.html light-mode design) ─────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    * { font-family: 'Inter', sans-serif; }
-    
-    .main { background: #0a0e1a; }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #1a1f35 0%, #252a45 100%);
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+    /* Base */
+    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; }
+    .main .block-container { background: #f8f9fa; padding-top: 1.5rem; }
+
+    /* Stat card metrics — monospace values */
+    [data-testid="stMetricValue"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
     }
-    
-    .risk-high { color: #ff4757; font-weight: 700; }
-    .risk-medium { color: #ffa502; font-weight: 700; }
-    .risk-low { color: #2ed573; font-weight: 700; }
-    
+    [data-testid="stMetricLabel"] {
+        font-size: 0.78rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.4px !important;
+        color: #475569 !important;
+    }
+    [data-testid="stMetricDelta"] { font-size: 0.78rem !important; }
+
+    /* Metric containers — white card style */
+    [data-testid="metric-container"] {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 18px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Risk badges */
+    .risk-high   { color: #dc2626; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .risk-medium { color: #d97706; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+    .risk-low    { color: #059669; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+    /* Action badges */
     .action-badge {
         display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 5px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
-    
+    .badge-rose    { background: #fef2f2; color: #dc2626; }
+    .badge-amber   { background: #fffbeb; color: #d97706; }
+    .badge-emerald { background: #ecfdf5; color: #059669; }
+    .badge-blue    { background: #f0f9ff; color: #0284c7; }
+    .badge-violet  { background: #f5f3ff; color: #7c3aed; }
+
+    /* Primary button */
     .stButton > button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 24px;
-        font-weight: 600;
+        background: #1e293b !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 10px 24px !important;
+        font-weight: 700 !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        transition: opacity 0.2s ease !important;
     }
-    
+    .stButton > button:hover { opacity: 0.88 !important; }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: #ffffff !important;
+        border-right: 1px solid #e2e8f0 !important;
+    }
+    [data-testid="stSidebar"] * { color: #0f172a !important; }
+
     .sidebar-header {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        padding: 15px;
+        background: #1e293b;
+        padding: 14px 16px;
         border-radius: 10px;
         text-align: center;
-        color: white;
+        color: white !important;
         font-weight: 700;
-        margin-bottom: 20px;
+        font-size: 1rem;
+        margin-bottom: 18px;
+        letter-spacing: 0.2px;
+    }
+
+    /* Evidence items */
+    .evidence-item {
+        font-size: 0.85rem;
+        color: #475569;
+        padding: 9px 13px;
+        background: #f8fafc;
+        border-left: 3px solid #1e293b;
+        border-radius: 0 6px 6px 0;
+        margin-bottom: 8px;
+        line-height: 1.45;
+    }
+
+    /* Dividers */
+    hr { border-color: #e2e8f0 !important; }
+
+    /* Audit table */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        overflow: hidden;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -110,7 +170,7 @@ with st.sidebar:
     
     page = st.selectbox(
         "Navigation",
-        ["🏠 Dashboard", "🔬 Score Session", "🎭 Demo Scenarios", "📊 Uplift Analysis", "📋 Audit Log"],
+        ["🏠 Dashboard", "🔬 Score Session", "⚡ Batch Scoring", "🎭 Demo Scenarios", "📊 Uplift Analysis", "📋 Audit Log"],
     )
     
     st.divider()
@@ -430,6 +490,95 @@ elif "🔬 Score Session" in page:
             st.error("Failed to score session. Is the backend running?")
 
 
+# ── Batch Scoring Page ────────────────────────────────────────────────────────
+elif "⚡ Batch Scoring" in page:
+    st.title("⚡ Batch Session Scoring")
+    st.caption("Score multiple sessions in parallel via `POST /api/v1/score/batch`.")
+
+    mode = st.radio("Select Batch Source", ["🎭 6 PRD Demo Scenarios Batch", "🎲 Generate Random Sessions Batch"], horizontal=True)
+
+    if "6 PRD" in mode:
+        scenarios_data = api_call("/api/v1/demo/scenarios")
+        if scenarios_data and "scenarios" in scenarios_data:
+            sessions_list = [s["session_data"] for s in scenarios_data["scenarios"]]
+            st.info(f"Loaded {len(sessions_list)} pre-configured demo scenarios for parallel batch execution.")
+        else:
+            sessions_list = [
+                {"session_id": "BATCH_001", "cart_value": 3500, "payment_attempts": 2, "payment_failures": 1, "session_duration": 240},
+                {"session_id": "BATCH_002", "cart_value": 1200, "product_views": 12, "tab_switches": 8, "session_duration": 480},
+                {"session_id": "BATCH_003", "cart_value": 800, "form_field_errors": 5, "session_duration": 360},
+                {"session_id": "BATCH_004", "cart_value": 1500, "payment_attempts": 2, "payment_failures": 1, "session_duration": 300},
+                {"session_id": "BATCH_005", "cart_value": 0, "product_views": 15, "session_duration": 720},
+                {"session_id": "BATCH_006", "cart_value": 900, "cart_adds": 3, "cart_removes": 2, "session_duration": 180},
+            ]
+            st.caption("Using offline fallback session payloads.")
+    else:
+        batch_size = st.slider("Batch Size", 2, 20, 5)
+        sessions_list = []
+        for i in range(batch_size):
+            sessions_list.append({
+                "session_id": f"RAND_BATCH_{i+1:03d}",
+                "cart_value": float(np.random.randint(500, 5000)),
+                "session_duration": float(np.random.randint(60, 600)),
+                "product_views": int(np.random.randint(1, 15)),
+                "cart_adds": int(np.random.randint(1, 5)),
+                "payment_attempts": int(np.random.randint(0, 3)),
+                "payment_failures": int(np.random.randint(0, 2)),
+            })
+        st.write(f"Generated {len(sessions_list)} dynamic random session payloads.")
+
+    with st.expander("🔍 Inspect Batch Request Payload"):
+        st.json({"sessions": sessions_list})
+
+    if st.button("🚀 Execute Batch Scoring", use_container_width=True):
+        with st.spinner(f"⚡ Scoring {len(sessions_list)} sessions in parallel..."):
+            res = api_call("/api/v1/score/batch", method="POST", data={"sessions": sessions_list})
+
+        if res and "results" in res:
+            results = res["results"]
+            st.success(f"✅ Processed {res.get('total', len(results))} sessions in parallel.")
+
+            # Summary Metrics
+            col1, col2, col3, col4 = st.columns(4)
+            high_risk = sum(1 for r in results if r.get("risk_level") == "HIGH")
+            do_nothing = sum(1 for r in results if r.get("action", {}).get("action_type") == "DO_NOTHING")
+            avg_lat = np.mean([r.get("metrics", {}).get("total_latency_ms", 0) for r in results if "metrics" in r]) if results else 0
+
+            with col1:
+                st.metric("Total Scored", len(results))
+            with col2:
+                st.metric("High Risk Sessions", high_risk)
+            with col3:
+                st.metric("DO NOTHING Rate", f"{(do_nothing / max(len(results), 1)) * 100:.0f}%")
+            with col4:
+                st.metric("Avg Latency", f"{avg_lat:.0f}ms")
+
+            # Table display
+            table_data = []
+            for r in results:
+                if "error" in r:
+                    table_data.append({"Session ID": "Error", "Risk Score": "N/A", "Risk Level": "ERROR", "Root Cause": r.get("error"), "Action": "NONE", "Latency": "N/A"})
+                else:
+                    table_data.append({
+                        "Session ID": r.get("session_id", "N/A"),
+                        "Risk Score": f"{r.get('risk_score', 0):.0%}",
+                        "Risk Level": r.get("risk_level", "LOW"),
+                        "Root Cause": r.get("diagnosis", {}).get("root_cause", "N/A"),
+                        "Action": r.get("action", {}).get("action_type", "DO_NOTHING"),
+                        "Discount": f"₹{r.get('action', {}).get('discount_amount', 0):.0f}",
+                        "Self Check": r.get("self_check", {}).get("status", "N/A"),
+                        "Latency (ms)": f"{r.get('metrics', {}).get('total_latency_ms', 0):.0f}",
+                    })
+
+            st.subheader("📋 Batch Results Summary")
+            st.dataframe(pd.DataFrame(table_data), use_container_width=True)
+
+            with st.expander("🔍 Full Batch Response JSON"):
+                st.json(res)
+        else:
+            st.error("Failed to execute batch scoring. Is backend running at `http://localhost:8000`?")
+
+
 # ── Demo Scenarios Page ─────────────────────────────────────────────────────────
 elif "🎭 Demo Scenarios" in page:
     st.title("🎭 Demo Scenarios")
@@ -557,7 +706,11 @@ elif "📋 Audit Log" in page:
     with col2:
         filter_session = st.text_input("Filter by Session ID", "")
     
-    logs = api_call(f"/api/v1/audit?limit={limit}")
+    # Bug fix: pass session filter to API call
+    audit_endpoint = f"/api/v1/audit?limit={limit}"
+    if filter_session:
+        audit_endpoint += f"&session_id={filter_session}"
+    logs = api_call(audit_endpoint)
     
     if logs and logs.get("logs"):
         df = pd.DataFrame(logs["logs"])
@@ -578,17 +731,17 @@ elif "📋 Audit Log" in page:
         st.info("No audit entries yet. Score some sessions to populate the log.")
 
 
-# ── Signal Interpreter ─────────────────────────────────────────────────────────
+# ── Signal Interpreter — moved above first use to fix NameError ──────────────
 def _interpret_signal(signal: str, value: float) -> str:
+    """Interpret a 0–1 signal value as a human-readable label."""
     interpretations = {
-        "hesitation_score": ["Decisive", "Slightly hesitant", "Hesitant", "Very hesitant"],
+        "hesitation_score":  ["Decisive", "Slightly hesitant", "Hesitant", "Very hesitant"],
         "price_sensitivity": ["Not price-sensitive", "Slightly price-sensitive", "Price-sensitive", "Highly price-sensitive"],
-        "funnel_friction": ["Smooth journey", "Minor friction", "Significant friction", "Severe friction"],
+        "funnel_friction":   ["Smooth journey", "Minor friction", "Significant friction", "Severe friction"],
         "comparison_intent": ["Focused buyer", "Some comparison", "Active comparison", "Heavy comparison"],
-        "urgency_score": ["Low urgency", "Moderate urgency", "High urgency", "Very urgent"],
-        "payment_risk": ["No payment risk", "Low risk", "Medium risk", "High payment risk"],
+        "urgency_score":     ["Low urgency", "Moderate urgency", "High urgency", "Very urgent"],
+        "payment_risk":      ["No payment risk", "Low risk", "Medium risk", "High payment risk"],
     }
-    
     labels = interpretations.get(signal, ["Low", "Medium", "High", "Very High"])
     idx = min(int(value * 4), 3)
     return labels[idx]

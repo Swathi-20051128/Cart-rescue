@@ -62,7 +62,71 @@ class AuditService:
             )
         """)
         conn.commit()
+        
+        # Check if audit_log is empty, and seed if needed
+        c.execute("SELECT COUNT(*) FROM audit_log")
+        if c.fetchone()[0] == 0:
+            self._seed_dummy_data(conn)
+            
         conn.close()
+
+    def _seed_dummy_data(self, conn: sqlite3.Connection):
+        """Seed initial realistic dummy audit records including high priority user email."""
+        c = conn.cursor()
+        dummy_entries = [
+            (
+                datetime.utcnow().isoformat(), "SES-YUVA-9912", "USR-YUVAGUDE", 0.88, "HIGH",
+                "PRICE_SENSITIVITY", 0.94, "LIMITED_OFFER", "EMAIL", 150.0, 0.35, 225.0,
+                "PASSED", 142.0, 0.0512,
+                json.dumps({"price_sensitivity": 0.85, "urgency_score": 0.90, "hesitation_score": 0.70}),
+                json.dumps({"user_email": "yuvagude@gmail.com", "user_segment": "PREMIUM", "cart_value": 1500.0, "action": {"action_type": "LIMITED_OFFER", "discount_amount": 150.0, "message": "🎁 Special 10% Off Your Saved Cart!"}})
+            ),
+            (
+                datetime.utcnow().isoformat(), "SES-8X92M", "USR-8812", 0.84, "HIGH",
+                "PAYMENT_FAILURE", 0.92, "ALTERNATE_PAYMENT_GUIDANCE", "IN_APP", 0.0, 0.45, 875.0,
+                "PASSED", 112.0, 0.0512,
+                json.dumps({"payment_risk": 0.95, "funnel_friction": 0.60}),
+                json.dumps({"cart_value": 3500.0, "payment_failures": 1})
+            ),
+            (
+                datetime.utcnow().isoformat(), "SES-9A11L", "USR-4410", 0.72, "HIGH",
+                "COMPARISON_SHOPPING", 0.88, "SOCIAL_PROOF_NUDGE", "IN_APP", 0.0, 0.20, 300.0,
+                "PASSED", 168.0, 0.0498,
+                json.dumps({"comparison_intent": 0.82, "tab_switches": 8}),
+                json.dumps({"cart_value": 1200.0})
+            ),
+            (
+                datetime.utcnow().isoformat(), "SES-2B44K", "USR-9932", 0.68, "MEDIUM",
+                "CHECKOUT_FRICTION", 0.82, "CHECKOUT_ASSISTANCE", "IN_APP", 0.0, 0.35, 200.0,
+                "PASSED", 110.0, 0.0341,
+                json.dumps({"funnel_friction": 0.80, "form_field_errors": 5}),
+                json.dumps({"cart_value": 800.0})
+            ),
+            (
+                datetime.utcnow().isoformat(), "SES-7M99P", "USR-1102", 0.41, "MEDIUM",
+                "MIXED_SIGNALS", 0.71, "DO_NOTHING", "NONE", 0.0, 0.05, 0.0,
+                "PASSED", 18.0, 0.0021,
+                json.dumps({"hesitation_score": 0.40}),
+                json.dumps({"cart_value": 1500.0})
+            ),
+            (
+                datetime.utcnow().isoformat(), "SES-1K88Q", "USR-3044", 0.18, "LOW",
+                "LOW_INTENT", 0.99, "DO_NOTHING", "NONE", 0.0, 0.01, 0.0,
+                "PASSED", 15.0, 0.0018,
+                json.dumps({"urgency_score": 0.10}),
+                json.dumps({"cart_value": 0.0})
+            ),
+        ]
+        c.executemany("""
+            INSERT INTO audit_log (
+                timestamp, session_id, user_id, risk_score, risk_level,
+                root_cause, diagnosis_confidence, action_type, channel,
+                discount_amount, uplift_probability, expected_margin,
+                self_check_status, total_latency_ms, total_cost_inr,
+                signals_json, full_result_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, dummy_entries)
+        conn.commit()
 
     def log_decision(self, result: Dict[str, Any], session_data: Dict[str, Any]):
         """Log a complete decision to the audit database."""

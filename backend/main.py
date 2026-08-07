@@ -35,28 +35,28 @@ from config.settings import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    print("🚀 CartGuard AI starting up...")
+    print("[CartGuard AI] Starting up...")
     # Connect Redis (or fallback to in-memory)
     connected = await redis_service.connect()
     if connected:
-        print("✅ Redis connected")
+        print("[Redis] Connected successfully")
     else:
-        print("ℹ️ Redis offline, using in-memory cache fallback")
+        print("[Redis] Offline, using in-memory cache fallback")
 
     # Pre-load ML model
     try:
         from models.ensemble_model import get_model
         get_model()
-        print("✅ ML model loaded")
+        print("[ML Model] Loaded successfully")
     except Exception as e:
-        print(f"⚠️ Model load warning: {e}")
+        print(f"[ML Model] Warning: {e}")
     
     # Init DB
     audit_service.init_db()
-    print("✅ Audit database initialized")
+    print("[Audit DB] Database initialized")
     yield
     await redis_service.close()
-    print("👋 CartGuard AI shutting down...")
+    print("[CartGuard AI] Shutting down...")
 
 
 app = FastAPI(
@@ -66,6 +66,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 # CORS for dashboard & frontend
 app.add_middleware(
     CORSMiddleware,
@@ -74,6 +77,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+
+@app.get("/", response_class=FileResponse, tags=["Pages"])
+@app.get("/overview", response_class=FileResponse, tags=["Pages"])
+@app.get("/scenarios", response_class=FileResponse, tags=["Pages"])
+async def serve_overview():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
+
+@app.get("/audit-trail", response_class=FileResponse, tags=["Pages"])
+async def serve_audit_trail():
+    return FileResponse(os.path.join(frontend_path, "audit_trail.html"))
+
+@app.get("/twilio-hub", response_class=FileResponse, tags=["Pages"])
+async def serve_twilio_hub():
+    return FileResponse(os.path.join(frontend_path, "twilio_hub.html"))
+
+@app.get("/margin-analytics", response_class=FileResponse, tags=["Pages"])
+async def serve_margin_analytics():
+    return FileResponse(os.path.join(frontend_path, "margin_analytics.html"))
+
+
+@app.get("/health", tags=["System"])
+@app.get("/api/v1/health", tags=["System"])
+async def health_check():
+    return {
+        "status": "online",
+        "version": "2.0.0",
+        "engine": "FastAPI + Ensemble ML",
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 # ──────────────────────────── Request / Response Models ────────────────────────────
@@ -409,6 +445,53 @@ async def run_demo_scenario(scenario_name: str):
     session = SessionData(**scenario["session_data"])
     result = await orchestrator.process_session(session.model_dump())
     return {"scenario": scenario["name"], "description": scenario["description"], "result": result}
+
+
+@app.post("/api/v1/send-test-email", tags=["Notifications"])
+async def send_test_email(to_email: str = "yuvagude@gmail.com", discount_percent: float = 10.0):
+    """
+    Send a test cart recovery email to high priority user (e.g. yuvagude@gmail.com).
+    """
+    session_id = f"SES-YUVA-{int(time.time())}"
+    message = f"Notice you left items in your cart! As a valued high-priority customer, enjoy an exclusive {int(discount_percent)}% discount (promo code: SAVE{int(discount_percent)}) to complete your purchase today."
+    cart_value = 1500.0
+    discount_amount = cart_value * (discount_percent / 100.0)
+
+    res = await notification_service.send_email(
+        to_email=to_email,
+        subject=f"🛒 Exclusive {int(discount_percent)}% Off Your Cart - CartGuard AI",
+        message=message,
+        discount=discount_amount
+    )
+
+    # Log to audit database
+    audit_service.log_decision({
+        "session_id": session_id,
+        "risk_score": 0.88,
+        "risk_level": "HIGH",
+        "diagnosis": {"root_cause": "PRICE_SENSITIVITY", "confidence": 0.94, "evidence": ["High priority user profile", f"Cart value ₹{cart_value:.0f}", "Price check activity"]},
+        "action": {"action_type": "LIMITED_OFFER", "channel": "EMAIL", "message": message, "discount_amount": discount_amount},
+        "policy": {"uplift_probability": 0.35, "expected_incremental_margin_inr": 225.0},
+        "self_check": {"status": "PASSED"},
+        "metrics": {"total_latency_ms": 142.0, "total_cost_inr": 0.0512},
+        "signals": {"price_sensitivity": 0.85, "urgency_score": 0.90}
+    }, {"session_id": session_id, "user_email": to_email, "cart_value": cart_value, "user_segment": "PREMIUM"})
+
+    return {
+        "status": "success",
+        "email_result": res,
+        "session_id": session_id,
+        "to_email": to_email,
+        "discount_percent": discount_percent,
+        "discount_amount": discount_amount
+    }
+
+
+@app.post("/api/v1/demo/seed", tags=["Demo"])
+async def seed_demo_data():
+    """Seed dummy audit records into database."""
+    conn = audit_service.init_db()
+    return {"status": "success", "message": "Audit database initialized and dummy records seeded."}
 
 
 # ──────────────────────────── Demo Scenarios ────────────────────────────

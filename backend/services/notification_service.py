@@ -64,7 +64,9 @@ class NotificationService:
     ) -> Dict[str, Any]:
         """Send cart recovery email via SendGrid."""
         if not self.sendgrid_key or not to_email:
-            print(f"[EMAIL MOCK] To: {to_email} | Subject: {subject} | Message: {message}")
+            safe_subj = subject.encode('ascii', 'replace').decode('ascii')
+            safe_msg = message.encode('ascii', 'replace').decode('ascii')
+            print(f"[EMAIL MOCK] To: {to_email} | Subject: {safe_subj} | Message: {safe_msg}")
             return {"status": "mock_sent", "channel": "email"}
 
         discount_html = ""

@@ -11,6 +11,7 @@ except ImportError:
     np = None
     pd = None
 import math
+from typing import Dict, Any, Optional, List
 
 
 class BehavioralSignalGenerator:
