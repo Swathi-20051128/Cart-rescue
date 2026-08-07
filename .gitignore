@@ -13,3 +13,7 @@ node_modules/
 *.egg-info/
 dist/
 build/
+backend/data/raw/*.csv 
+backend/data/processed/*.parquet 
+backend/data/training/*.parquet 
+backend/models/*.pkl 
