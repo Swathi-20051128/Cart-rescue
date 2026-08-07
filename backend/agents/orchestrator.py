@@ -359,6 +359,104 @@ class PolicyAgent:
         return round(max_discount, 2)
 
 
+class PolicyEngine:
+    """Policy Engine with Guardrails matching M3 backend specification."""
+    def __init__(self):
+        self.budget_tracker = {}
+        self.consent_cache = {}
+
+    def decide(self, risk: dict, diagnosis: dict, budget: dict = None) -> dict:
+        """Apply business rules and guardrails"""
+        risk_score = risk.get("risk_score", 0) if isinstance(risk, dict) else float(risk)
+        root_cause = diagnosis.get("root_cause", "UNKNOWN") if isinstance(diagnosis, dict) else "UNKNOWN"
+        if budget is None:
+            budget = {"remaining": 500.0, "min_discount": 10.0}
+
+        # Rule 1: Low risk -> DO_NOTHING
+        if risk_score < 0.3:
+            return self._action_do_nothing(risk, diagnosis)
+
+        # Rule 2: Payment failure -> Payment help (0 discount)
+        if root_cause == "PAYMENT_FAILURE":
+            return self._action_payment_help(risk, diagnosis)
+
+        # Rule 3: Price shopping with high value -> Value reassurance
+        if root_cause in ["PRICE_SHOPPING", "PRICE_SENSITIVITY"] and risk_score < 0.7:
+            return self._action_value_reassurance(risk, diagnosis)
+
+        # Rule 4: High risk + budget available -> Limited discount
+        if risk_score > 0.7 and budget.get("remaining", 0) > budget.get("min_discount", 0):
+            return self._action_limited_discount(risk, diagnosis, budget)
+
+        # Rule 5: Friction detected -> Checkout help
+        if root_cause == "CHECKOUT_FRICTION":
+            return self._action_checkout_help(risk, diagnosis)
+
+        # Default: DO_NOTHING (conservative)
+        return self._action_do_nothing(risk, diagnosis)
+
+    def _action_do_nothing(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "DO_NOTHING",
+            "action_type": "DO_NOTHING",
+            "action_message": "No intervention needed",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "NONE",
+            "expected_margin": 0.0,
+            "reason": risk.get("reason", "LOW_RISK") if isinstance(risk, dict) else "LOW_RISK"
+        }
+
+    def _action_payment_help(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "ALTERNATE_PAYMENT",
+            "action_type": "ALTERNATE_PAYMENT_GUIDANCE",
+            "action_message": "Having trouble paying? Try UPI, Netbanking, or Cash on Delivery.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "PAYMENT_FAILURE"
+        }
+
+    def _action_value_reassurance(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "VALUE_REASSURANCE",
+            "action_type": "SOCIAL_PROOF_NUDGE",
+            "action_message": "Best price guaranteed! Free 30-day returns and authentic items.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "PRICE_SHOPPING"
+        }
+
+    def _action_limited_discount(self, risk: dict, diagnosis: dict, budget: dict) -> dict:
+        discount = min(100.0, float(budget.get("remaining", 50.0)))
+        return {
+            "action": "LIMITED_DISCOUNT",
+            "action_type": "LIMITED_OFFER",
+            "action_message": f"Exclusive offer: Complete your checkout in 15 mins to save ₹{int(discount)}!",
+            "discount": discount,
+            "discount_amount": discount,
+            "channel": "IN_APP",
+            "expected_margin": round(discount * 2, 2),
+            "reason": "HIGH_RISK_CONVERSION_NUDGE"
+        }
+
+    def _action_checkout_help(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "CHECKOUT_HELP",
+            "action_type": "CHECKOUT_ASSISTANCE",
+            "action_message": "Need help with address or checkout? Our support team is 1 click away.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "CHECKOUT_FRICTION"
+        }
+
+
 class ActionAgent:
     """Generates personalized, context-aware action recommendations."""
     name = "ActionAgent"
