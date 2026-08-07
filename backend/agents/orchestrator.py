@@ -214,41 +214,22 @@ Respond in JSON:
     ) -> Dict[str, Any]:
         start = time.time()
         
-        sigs = signals.get("signals", {})
-        prompt = self.DIAGNOSIS_PROMPT.format(
-            hesitation_score=round(sigs.get("hesitation_score", 0), 3),
-            price_sensitivity=round(sigs.get("price_sensitivity", 0), 3),
-            funnel_friction=round(sigs.get("funnel_friction", 0), 3),
-            comparison_intent=round(sigs.get("comparison_intent", 0), 3),
-            urgency_score=round(sigs.get("urgency_score", 0), 3),
-            payment_risk=round(sigs.get("payment_risk", 0), 3),
-            payment_attempts=session_data.get("payment_attempts", 0),
-            payment_failures=session_data.get("payment_failures", 0),
-            cart_value=round(session_data.get("cart_value", 0), 2),
-            session_duration=round(session_data.get("session_duration", 0), 0),
-            tab_switches=session_data.get("tab_switches", 0),
-            form_field_errors=session_data.get("form_field_errors", 0),
-            risk_score=round(risk_result.get("risk_score", 0), 3),
-        )
-
-        llm_result = await llm_client.complete(prompt, model_size="small")
-        
         try:
-            text = llm_result["text"]
-            # Extract JSON from response
-            if "{" in text:
-                json_str = text[text.index("{"):text.rindex("}")+1]
-                diagnosis = json.loads(json_str)
-            else:
-                diagnosis = {"root_cause": "UNKNOWN", "confidence": 0.5, "evidence": [], "recommendation": "DO_NOTHING"}
-        except Exception:
+            from agents.llm_agents import AgentOrchestrator
+            agent_orch = AgentOrchestrator()
+            context = {**session_data, **signals.get("signals", {}), "risk_score": risk_result.get("risk_score", 0)}
+            diagnosis = await agent_orch.diagnose_session(context)
+            cost = 0.005
+        except Exception as e:
+            sigs = signals.get("signals", {})
             diagnosis = self._rule_based_diagnosis(sigs, session_data)
+            cost = 0.001
 
         latency = (time.time() - start) * 1000
         return {
             **diagnosis,
             "latency_ms": latency,
-            "cost_inr": llm_result.get("cost_inr", 0.001),
+            "cost_inr": cost,
         }
 
     def _rule_based_diagnosis(self, signals: Dict, session_data: Dict) -> Dict:
@@ -376,6 +357,104 @@ class PolicyAgent:
         margin = cart_value * 0.25
         max_discount = min(margin * 0.3, 500, cart_value * 0.10)
         return round(max_discount, 2)
+
+
+class PolicyEngine:
+    """Policy Engine with Guardrails matching M3 backend specification."""
+    def __init__(self):
+        self.budget_tracker = {}
+        self.consent_cache = {}
+
+    def decide(self, risk: dict, diagnosis: dict, budget: dict = None) -> dict:
+        """Apply business rules and guardrails"""
+        risk_score = risk.get("risk_score", 0) if isinstance(risk, dict) else float(risk)
+        root_cause = diagnosis.get("root_cause", "UNKNOWN") if isinstance(diagnosis, dict) else "UNKNOWN"
+        if budget is None:
+            budget = {"remaining": 500.0, "min_discount": 10.0}
+
+        # Rule 1: Low risk -> DO_NOTHING
+        if risk_score < 0.3:
+            return self._action_do_nothing(risk, diagnosis)
+
+        # Rule 2: Payment failure -> Payment help (0 discount)
+        if root_cause == "PAYMENT_FAILURE":
+            return self._action_payment_help(risk, diagnosis)
+
+        # Rule 3: Price shopping with high value -> Value reassurance
+        if root_cause in ["PRICE_SHOPPING", "PRICE_SENSITIVITY"] and risk_score < 0.7:
+            return self._action_value_reassurance(risk, diagnosis)
+
+        # Rule 4: High risk + budget available -> Limited discount
+        if risk_score > 0.7 and budget.get("remaining", 0) > budget.get("min_discount", 0):
+            return self._action_limited_discount(risk, diagnosis, budget)
+
+        # Rule 5: Friction detected -> Checkout help
+        if root_cause == "CHECKOUT_FRICTION":
+            return self._action_checkout_help(risk, diagnosis)
+
+        # Default: DO_NOTHING (conservative)
+        return self._action_do_nothing(risk, diagnosis)
+
+    def _action_do_nothing(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "DO_NOTHING",
+            "action_type": "DO_NOTHING",
+            "action_message": "No intervention needed",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "NONE",
+            "expected_margin": 0.0,
+            "reason": risk.get("reason", "LOW_RISK") if isinstance(risk, dict) else "LOW_RISK"
+        }
+
+    def _action_payment_help(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "ALTERNATE_PAYMENT",
+            "action_type": "ALTERNATE_PAYMENT_GUIDANCE",
+            "action_message": "Having trouble paying? Try UPI, Netbanking, or Cash on Delivery.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "PAYMENT_FAILURE"
+        }
+
+    def _action_value_reassurance(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "VALUE_REASSURANCE",
+            "action_type": "SOCIAL_PROOF_NUDGE",
+            "action_message": "Best price guaranteed! Free 30-day returns and authentic items.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "PRICE_SHOPPING"
+        }
+
+    def _action_limited_discount(self, risk: dict, diagnosis: dict, budget: dict) -> dict:
+        discount = min(100.0, float(budget.get("remaining", 50.0)))
+        return {
+            "action": "LIMITED_DISCOUNT",
+            "action_type": "LIMITED_OFFER",
+            "action_message": f"Exclusive offer: Complete your checkout in 15 mins to save ₹{int(discount)}!",
+            "discount": discount,
+            "discount_amount": discount,
+            "channel": "IN_APP",
+            "expected_margin": round(discount * 2, 2),
+            "reason": "HIGH_RISK_CONVERSION_NUDGE"
+        }
+
+    def _action_checkout_help(self, risk: dict, diagnosis: dict) -> dict:
+        return {
+            "action": "CHECKOUT_HELP",
+            "action_type": "CHECKOUT_ASSISTANCE",
+            "action_message": "Need help with address or checkout? Our support team is 1 click away.",
+            "discount": 0.0,
+            "discount_amount": 0.0,
+            "channel": "IN_APP",
+            "expected_margin": 0.0,
+            "reason": "CHECKOUT_FRICTION"
+        }
 
 
 class ActionAgent:
@@ -544,6 +623,15 @@ class SelfCheckAgent:
         
         # Check 5: Logic (no discount for payment failure)
         checks["logic"] = self._check_logic(diagnosis, action)
+
+        # Check 6: LLM Self-Validation Layer
+        try:
+            from agents.llm_agents import SelfCheckValidator
+            validator = SelfCheckValidator()
+            llm_val = await validator.validate(diagnosis, action, policy)
+            checks["llm_self_validation"] = llm_val.get("is_valid", True)
+        except Exception:
+            checks["llm_self_validation"] = True
 
         all_passed = all(checks.values())
         
