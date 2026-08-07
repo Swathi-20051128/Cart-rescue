@@ -214,41 +214,22 @@ Respond in JSON:
     ) -> Dict[str, Any]:
         start = time.time()
         
-        sigs = signals.get("signals", {})
-        prompt = self.DIAGNOSIS_PROMPT.format(
-            hesitation_score=round(sigs.get("hesitation_score", 0), 3),
-            price_sensitivity=round(sigs.get("price_sensitivity", 0), 3),
-            funnel_friction=round(sigs.get("funnel_friction", 0), 3),
-            comparison_intent=round(sigs.get("comparison_intent", 0), 3),
-            urgency_score=round(sigs.get("urgency_score", 0), 3),
-            payment_risk=round(sigs.get("payment_risk", 0), 3),
-            payment_attempts=session_data.get("payment_attempts", 0),
-            payment_failures=session_data.get("payment_failures", 0),
-            cart_value=round(session_data.get("cart_value", 0), 2),
-            session_duration=round(session_data.get("session_duration", 0), 0),
-            tab_switches=session_data.get("tab_switches", 0),
-            form_field_errors=session_data.get("form_field_errors", 0),
-            risk_score=round(risk_result.get("risk_score", 0), 3),
-        )
-
-        llm_result = await llm_client.complete(prompt, model_size="small")
-        
         try:
-            text = llm_result["text"]
-            # Extract JSON from response
-            if "{" in text:
-                json_str = text[text.index("{"):text.rindex("}")+1]
-                diagnosis = json.loads(json_str)
-            else:
-                diagnosis = {"root_cause": "UNKNOWN", "confidence": 0.5, "evidence": [], "recommendation": "DO_NOTHING"}
-        except Exception:
+            from agents.llm_agents import AgentOrchestrator
+            agent_orch = AgentOrchestrator()
+            context = {**session_data, **signals.get("signals", {}), "risk_score": risk_result.get("risk_score", 0)}
+            diagnosis = await agent_orch.diagnose_session(context)
+            cost = 0.005
+        except Exception as e:
+            sigs = signals.get("signals", {})
             diagnosis = self._rule_based_diagnosis(sigs, session_data)
+            cost = 0.001
 
         latency = (time.time() - start) * 1000
         return {
             **diagnosis,
             "latency_ms": latency,
-            "cost_inr": llm_result.get("cost_inr", 0.001),
+            "cost_inr": cost,
         }
 
     def _rule_based_diagnosis(self, signals: Dict, session_data: Dict) -> Dict:
@@ -544,6 +525,15 @@ class SelfCheckAgent:
         
         # Check 5: Logic (no discount for payment failure)
         checks["logic"] = self._check_logic(diagnosis, action)
+
+        # Check 6: LLM Self-Validation Layer
+        try:
+            from agents.llm_agents import SelfCheckValidator
+            validator = SelfCheckValidator()
+            llm_val = await validator.validate(diagnosis, action, policy)
+            checks["llm_self_validation"] = llm_val.get("is_valid", True)
+        except Exception:
+            checks["llm_self_validation"] = True
 
         all_passed = all(checks.values())
         
