@@ -5,7 +5,6 @@ __pycache__/
 .env
 *.db
 *.cbm
-*.pkl
 *.json
 !backend/requirements.txt
 node_modules/
@@ -16,4 +15,3 @@ build/
 backend/data/raw/*.csv 
 backend/data/processed/*.parquet 
 backend/data/training/*.parquet 
-backend/models/*.pkl 
