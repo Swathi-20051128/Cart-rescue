@@ -1,6 +1,13 @@
 """
 CartGuard AI - Synthetic Data Generator
 Generates realistic e-commerce session data with behavioral signals.
+
+FIX (leakage patch): archetypes previously used non-overlapping, deterministic
+ranges for checkout_steps_completed / payment_attempts / payment_failures,
+which let the model perfectly separate classes by memorizing archetype
+boundaries instead of learning behavior. This version adds cross-archetype
+overlap noise + small label noise so no single feature (or fixed combination)
+perfectly determines `abandoned`.
 """
 import numpy as np
 import random
@@ -11,7 +18,7 @@ def generate_synthetic_sessions(n_samples: int = 5000, seed: int = 42) -> List[D
     """
     Generate synthetic e-commerce sessions with realistic behavioral patterns.
     Labels sessions as abandoned (1) or converted (0).
-    
+
     Session types:
     - Payment failure (15%)
     - Comparison shopping (20%)
@@ -24,22 +31,48 @@ def generate_synthetic_sessions(n_samples: int = 5000, seed: int = 42) -> List[D
     random.seed(seed)
     sessions = []
 
-    # Session type distribution
-    types = ["payment_failure", "comparison_shopping", "friction", 
+    types = ["payment_failure", "comparison_shopping", "friction",
              "low_intent", "urgent_buyer", "converted"]
     weights = [0.15, 0.20, 0.15, 0.10, 0.20, 0.20]
 
     for i in range(n_samples):
         session_type = np.random.choice(types, p=weights)
         session = _generate_session_by_type(session_type, i)
+        session = _apply_overlap_noise(session)
         sessions.append(session)
 
     return sessions
 
 
+def _apply_overlap_noise(session: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Break deterministic archetype boundaries so classes overlap realistically.
+    - 10% chance: checkout_steps_completed sampled from full 0-5 range
+      regardless of type (people abandon at any step, including the last one).
+    - 8% chance: payment_attempts / payment_failures sampled from full range
+      regardless of type (payment issues can occur even on sessions that
+      otherwise look like a clean browse or a clean buy).
+    - 3% label noise: flip `abandoned` (real-world labels are never perfectly
+      clean, and this prevents the ensemble from treating any feature set as
+      a deterministic lookup table).
+    """
+    if random.random() < 0.10:
+        session["checkout_steps_completed"] = np.random.randint(0, 6)
+        session["checkout_completion_rate"] = session["checkout_steps_completed"] / 5.0
+
+    if random.random() < 0.08:
+        session["payment_attempts"] = np.random.randint(0, 4)
+        session["payment_failures"] = np.random.randint(0, session["payment_attempts"] + 1)
+
+    if random.random() < 0.03:
+        session["abandoned"] = 1 - session["abandoned"]
+
+    return session
+
+
 def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
     """Generate a session matching the given type."""
-    
+
     base = {
         "session_id": f"S{idx:06d}",
         "session_type": session_type,
@@ -60,7 +93,7 @@ def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
             "category_switches": np.random.randint(0, 2),
             "tab_switches": np.random.randint(0, 3),
             "page_revisits": np.random.randint(1, 3),
-            "checkout_steps_completed": np.random.randint(3, 5),
+            "checkout_steps_completed": np.random.randint(2, 6),
             "total_checkout_steps": 5,
             "checkout_time": np.random.uniform(60, 180),
             "payment_attempts": np.random.randint(1, 4),
@@ -85,12 +118,12 @@ def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
             "category_switches": np.random.randint(3, 8),
             "tab_switches": np.random.randint(5, 15),
             "page_revisits": np.random.randint(2, 6),
-            "checkout_steps_completed": 0,
+            "checkout_steps_completed": np.random.randint(0, 2),
             "total_checkout_steps": 5,
-            "checkout_time": 0,
-            "payment_attempts": 0,
+            "checkout_time": np.random.uniform(0, 30),
+            "payment_attempts": np.random.randint(0, 1),
             "payment_failures": 0,
-            "time_on_payment_page": 0,
+            "time_on_payment_page": np.random.uniform(0, 20),
             "payment_method_switches": 0,
             "form_field_errors": 0,
             "back_navigations": np.random.randint(2, 5),
@@ -110,12 +143,12 @@ def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
             "category_switches": np.random.randint(0, 2),
             "tab_switches": np.random.randint(0, 2),
             "page_revisits": np.random.randint(1, 4),
-            "checkout_steps_completed": np.random.randint(1, 3),
+            "checkout_steps_completed": np.random.randint(1, 4),
             "total_checkout_steps": 5,
             "checkout_time": np.random.uniform(120, 300),
-            "payment_attempts": 0,
-            "payment_failures": 0,
-            "time_on_payment_page": 0,
+            "payment_attempts": np.random.randint(0, 2),
+            "payment_failures": np.random.randint(0, 1),
+            "time_on_payment_page": np.random.uniform(0, 60),
             "payment_method_switches": 0,
             "form_field_errors": np.random.randint(2, 6),
             "back_navigations": np.random.randint(3, 7),
@@ -160,15 +193,15 @@ def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
             "category_switches": np.random.randint(0, 1),
             "tab_switches": np.random.randint(0, 2),
             "page_revisits": np.random.randint(0, 1),
-            "checkout_steps_completed": 5,
+            "checkout_steps_completed": np.random.randint(4, 6),
             "total_checkout_steps": 5,
             "checkout_time": np.random.uniform(30, 90),
-            "payment_attempts": 1,
+            "payment_attempts": np.random.randint(1, 2),
             "payment_failures": 0,
             "time_on_payment_page": np.random.uniform(20, 60),
             "payment_method_switches": 0,
-            "form_field_errors": 0,
             "back_navigations": 0,
+            "form_field_errors": 0,
             "abandoned": 0,  # CONVERTED
         }
 
@@ -185,7 +218,7 @@ def _generate_session_by_type(session_type: str, idx: int) -> Dict[str, Any]:
             "category_switches": np.random.randint(0, 3),
             "tab_switches": np.random.randint(0, 3),
             "page_revisits": np.random.randint(0, 2),
-            "checkout_steps_completed": 5,
+            "checkout_steps_completed": np.random.randint(4, 6),
             "total_checkout_steps": 5,
             "checkout_time": np.random.uniform(45, 120),
             "payment_attempts": np.random.randint(1, 2),
