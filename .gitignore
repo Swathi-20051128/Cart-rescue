@@ -15,3 +15,5 @@ build/
 backend/data/raw/*.csv 
 backend/data/processed/*.parquet 
 backend/data/training/*.parquet 
+backend/models/*.cbm
+backend/models/*.json
