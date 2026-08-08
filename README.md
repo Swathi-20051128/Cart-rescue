@@ -1,20 +1,33 @@
-# CAIG #
+# CartGuard AI v2.0 #
 
 <div align="center">
 
 ![CartGuard AI Hero Banner](https://img.shields.io/badge/CartGuard_AI-v2.0_Production_Ready-6f42c1?style=for-the-badge&logo=shield&logoColor=white)
-[![Python Version](https.img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Redis](https://img.shields.io/badge/Redis-Async_Streaming-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 [![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![Render](https://img.shields.io/badge/Render-Hosted-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://cartguard-backend.onrender.com)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://cart-rescue.vercel.app)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
 ### **Next-Generation Real-Time Cart Abandonment Diagnosis & Guardrailed Remediation Engine**
-*Tailored for Indian E-Commerce • Powered by ML Ensembles & Llama 3.2 Multi-Agent CoT Reasoning*
+*Tailored for Indian E-Commerce • Powered by CatBoost/XGBoost ML Ensembles & Llama 3.2 Multi-Agent CoT Reasoning*
 
-[Architecture](#-system-architecture) • [Demo Scenarios](#-6-pre-configured-demo-scenarios) • [Quick Start](#-quick-start) • [API Spec](#-api-reference) • [Team Breakdown](#-4-person-team-classification)
+[🌐 Live Deployment](#-live-deployments) • [Architecture](#-system-architecture) • [Demo Scenarios](#-6-prd-demo-scenarios) • [Quick Start](#-quick-start) • [API Spec](#-api-reference) • [Team](#-4-person-team-classification)
 
 </div>
+
+---
+
+## 🌐 Live Deployments
+
+CartGuard AI is fully deployed across free, high-performance cloud providers:
+
+| Component | Cloud Host | Live Link | Status |
+| :--- | :---: | :--- | :---: |
+| ⚡ **Backend API Server** | **Render** | [https://cartguard-backend.onrender.com](https://cartguard-backend.onrender.com) | `🟢 Live` |
+| 🛒 **Streamlit Dashboard** | **Render** | [https://cartguard-dashboard.onrender.com](https://cartguard-dashboard.onrender.com) | `🟢 Live` |
+| 💻 **Frontend Web App** | **Vercel** | [https://cart-rescue.vercel.app](https://cart-rescue.vercel.app) | `🟢 Live` |
 
 ---
 
@@ -23,11 +36,12 @@
 Traditional cart recovery solutions rely on **blanket discounts** and aggressive retargeting emails, eroding merchant profit margins and spamming shoppers. **CartGuard AI** revolutionizes e-commerce recovery by diagnosing *why* a shopper is hesitating in real time and prescribing precision interventions.
 
 ### Key Highlights
-- 🧠 **Multi-Agent CoT Reasoning**: Specialized LLM agents (Llama 3.2 3B / Groq) diagnose root causes like payment timeouts, price sensitivity, checkout friction, or low intent.
+- 🧠 **Multi-Agent CoT Reasoning**: 6 specialized LLM/Rule agents (Signal, Risk, Diagnosis, Policy, Action, Self-Check) diagnose root causes like payment timeouts, price sensitivity, checkout friction, or low intent.
 - ⚡ **Ultra-Low Latency ML Scoring**: CatBoost + XGBoost ensemble computes behavioral risk scores in **<10ms**.
 - 🛡️ **Strict Policy Guardrails**: Enforces per-user (₹500/mo) and per-campaign (₹50,000) budget caps, TRAI/DND consent checks, and margin protection.
 - 🎯 **`DO_NOTHING` Intelligence**: Conservative default prevents unnecessary discounts when shoppers are already going to convert or have low purchase intent.
-- 📈 **Verified Incremental Uplift**: Causal uplift modeling ensures actions are taken ONLY when expected incremental margin exceeds costs ($\Delta \text{Margin} > 0$).
+- 💬 **Multi-Channel Notifications**: Real-time SMS and WhatsApp delivery via **Twilio (E.164 standard)** and Email delivery via **SendGrid**.
+- 🎲 **Persona Archetype Batch Engine**: Simulates 8 real-world buyer personas with ±20% jitter noise to demonstrate ML model score variance.
 
 ---
 
@@ -38,6 +52,7 @@ flowchart TD
     subgraph Client ["🌐 Client Layer (M4)"]
         SDK["CartGuard Browser SDK<br/>(cartguard-sdk.js)"]
         Dashboard["Streamlit Control Center<br/>(dashboard/app.py)"]
+        Frontend["Vercel Frontend<br/>(frontend/index.html)"]
     end
 
     subgraph API ["⚡ API & Ingestion Layer (M3)"]
@@ -56,15 +71,16 @@ flowchart TD
 
     subgraph Storage ["💾 Persistence & Adapters (M3)"]
         Audit["SQLite Audit DB<br/>(Full Decision Trail)"]
-        Notif["Notification Service<br/>(SendGrid / Twilio)"]
+        Notif["Notification Service<br/>(Twilio SMS/WhatsApp & SendGrid)"]
     end
 
-    SDK -->|WebSocket Event Stream / REST| FastAPI
+    SDK -->|WebSocket Stream / REST| FastAPI
     Dashboard -->|REST / Scenarios| FastAPI
+    Frontend -->|REST| FastAPI
     FastAPI <--> Redis
     FastAPI --> Signal
     Signal --> Risk
-    Risk -->|Risk Score > 0.3| Diagnosis
+    Risk -->|Risk Score >= 0.55| Diagnosis
     Diagnosis --> Policy
     Policy --> Action
     Action --> SelfCheck
@@ -81,18 +97,18 @@ flowchart TD
 | :--- | :---: | :--- | :--- |
 | **M1** | **ML & Data Engineer** | Data Pipeline + Model Training | CatBoost + XGBoost Ensemble, 50+ Feature Engineering Pipeline, Synthetic Signal Generator, ROC-AUC > 0.85. |
 | **M2** | **AI/LLM Engineer** | Agent System + Prompt Engineering | Llama 3.2 3B Chain-of-Thought Reasoning Agents, Specialized Prompt Library, Session Cache, Fallback Engine, Self-Check Validator. |
-| **M3** | **Backend & Systems Engineer** | API + Infrastructure | FastAPI REST Server, WebSocket Stream Ingestion, Redis Service (with in-memory fallback), Audit Logging DB, Prometheus Metrics (`/metrics`), Notification Adapters. |
-| **M4** | **Full-Stack & Product Lead** | Frontend + Integration + Pitch | Streamlit Interactive Command Dashboard, Lightweight JS Browser SDK (`cartguard-sdk.js`), 6 Pre-Canned Demo Scenarios, Pitch & Visuals. |
+| **M3** | **Backend & Systems Engineer** | API + Infrastructure | FastAPI REST Server, WebSocket Stream Ingestion, Redis Service (with in-memory fallback), Audit Logging DB, Prometheus Metrics (`/metrics`), Twilio/SendGrid Adapters. |
+| **M4** | **Full-Stack & Product Lead** | Frontend + Integration + UI/UX | Streamlit Interactive Command Dashboard (Crisp Light Theme), Lightweight JS Browser SDK (`cartguard-sdk.js`), 6 PRD Scenarios, Persona Batch Engine. |
 
 ---
 
-## 🎭 6 Pre-Configured Demo Scenarios
+## 🎭 6 PRD Demo Scenarios
 
 Test the end-to-end multi-agent workflow instantly via pre-configured scenarios:
 
 | # | Scenario | Behavioral Micro-Signals | Root Cause | Prescribed Action | Channel | Discount |
 |---|----------|--------------------------|------------|-------------------|---------|----------|
-| **1** | **Payment Failure** | 2 failed UPI attempts, 120s on payment page, high hesitation | `PAYMENT_FAILURE` | **Alternate Payment Guidance** (UPI/COD help) | `IN_APP` | **₹0** |
+| **1** | **Payment Failure** | 2 failed UPI attempts, 120s on payment page | `PAYMENT_FAILURE` | **Alternate Payment Guidance** (UPI/COD help) | `IN_APP` | **₹0** |
 | **2** | **Price Shopping** | 12 product views, 5 category switches, 3 tab losses | `PRICE_SHOPPING` | **Value Reassurance Nudge** (Social proof & returns) | `IN_APP` | **₹0** |
 | **3** | **Checkout Friction** | Slow scroll speed, 5 form errors, 6 back navigations | `CHECKOUT_FRICTION` | **Checkout Assistance** (Support chat offer) | `IN_APP` | **₹0** |
 | **4** | **Mixed Signals** | 2 attempts (1 fail, 1 success), volatile cart changes | `LOW_RISK` | **DO NOTHING** (Prevent unnecessary interference) | `NONE` | **₹0** |
@@ -117,7 +133,7 @@ Test the end-to-end multi-agent workflow instantly via pre-configured scenarios:
 
 ### 1. Primary Scoring Endpoint
 ```http
-POST /score-session
+POST /api/v1/score
 Content-Type: application/json
 ```
 
@@ -129,15 +145,14 @@ Content-Type: application/json
   "session_duration": 210,
   "product_views": 4,
   "cart_adds": 3,
-  "checkout_reached": 1,
+  "checkout_steps_completed": 4,
   "payment_attempts": 2,
   "payment_failures": 2,
   "email_opt_in": true,
-  "whatsapp_opt_in": false,
-  "mouse_velocity": 0.8,
-  "scroll_speed": 120,
-  "form_hesitation": 0.9,
-  "tab_loss_count": 1
+  "sms_opt_in": true,
+  "whatsapp_opt_in": true,
+  "user_email": "user@example.com",
+  "user_phone": "+918639271799"
 }
 ```
 
@@ -147,66 +162,24 @@ Content-Type: application/json
   "session_id": "S1001",
   "risk_score": 0.845,
   "risk_level": "HIGH",
-  "reason": "PAYMENT_FAILURE",
-  "confidence": 0.92,
-  "evidence": [
-    "2 failed payment attempts detected",
-    "Extended duration on payment step"
-  ],
-  "action": "ALTERNATE_PAYMENT",
-  "action_message": "Having trouble paying? Try UPI, Netbanking, or Cash on Delivery.",
-  "discount": 0.0,
-  "channel": "IN_APP",
-  "expected_margin": 0.0,
-  "self_check": "PASSED",
-  "audit_id": "audit_1741392000_S1001",
-  "latency_ms": 145.2
-}
-```
-
----
-
-### 2. WebSocket Real-Time Event Streaming
-```javascript
-// Connect to session stream
-const ws = new WebSocket('ws://localhost:8000/ws/S1001');
-
-// Send real-time event
-ws.send(JSON.stringify({
-  type: 'score_request',
-  data: {
-    cart_value: 2499,
-    payment_attempts: 2,
-    payment_failures: 2
-  }
-}));
-
-// Receive immediate action response
-ws.onmessage = (event) => {
-  const response = JSON.parse(event.data);
-  console.log('Action Prescribed:', response.action_message);
-};
-```
-
----
-
-### 3. Prometheus Metrics Endpoint
-```http
-GET /metrics
-```
-**Response:**
-```json
-{
-  "total_sessions": 1234,
-  "high_risk_sessions": 340,
-  "actions_taken": 280,
-  "do_nothing_count": 954,
-  "do_nothing_rate": 0.77,
-  "total_discount_inr": 4500.0,
-  "avg_discount": 45.0,
-  "p95_latency_ms": 158.0,
-  "recovery_rate": 0.68,
-  "avg_risk_score": 0.452
+  "diagnosis": {
+    "root_cause": "PAYMENT_FAILURE",
+    "confidence": 0.92,
+    "evidence": ["2 failed payment attempts detected", "Extended duration on payment step"]
+  },
+  "action": {
+    "action_type": "ALTERNATE_PAYMENT_GUIDANCE",
+    "channel": "WHATSAPP",
+    "message": "Having trouble paying? Try UPI, netbanking, or COD — all available for your order!",
+    "discount_amount": 0
+  },
+  "self_check": { "status": "PASSED" },
+  "notification_result": {
+    "status": "sent",
+    "channel": "whatsapp",
+    "sid": "SM84603bd6..."
+  },
+  "api_latency_ms": 145.2
 }
 ```
 
@@ -215,7 +188,7 @@ GET /metrics
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.10 or 3.11
 - Git
 
 ### 1. Clone & Setup Project
@@ -225,22 +198,25 @@ cd Cart-rescue
 ```
 
 ### 2. Environment Configuration
-Create a `.env` file in the root directory (or edit `backend/.env`):
-```bash
-cp .env.example .env
+Create `.env` file in the root directory:
+```ini
+LLM_PROVIDER=groq
+GROQ_API_KEY=your_groq_api_key
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM_NUMBER=+14155238886
+SENDGRID_API_KEY=SG.your_sendgrid_key
 ```
-*Optional: Add your `GROQ_API_KEY`, `SENDGRID_API_KEY`, or `TWILIO_ACCOUNT_SID`. If omitted, the system seamlessly operates using intelligent rule-based fallbacks.*
 
-### 3. Run via One-Command Makefile
+### 3. Run Locally via Python
 ```bash
-# Setup virtual environment & dependencies
-make setup
+# Terminal 1: Backend API
+cd backend
+python main.py
 
-# Start Backend API Server (Port 8000)
-make start-backend
-
-# Start Streamlit Dashboard (Port 8501)
-make start-dashboard
+# Terminal 2: Streamlit Dashboard
+cd dashboard
+streamlit run app.py
 ```
 
 ### 4. Run via Docker Compose (Alternative)
@@ -250,23 +226,13 @@ docker-compose up --build
 
 ---
 
-## 🧪 Running Automated Test Suite
+## ☁️ Cloud Deployment Configuration
 
-CartGuard AI features 100% test pass coverage across backend routes, Redis fallback handlers, Policy Engine guardrails, and audit trail services:
+This repository is configured for 1-click zero-cost deployment:
 
-```bash
-cd backend
-python3 -m unittest discover -s tests
-```
-
-**Expected Output:**
-```text
-...............
-----------------------------------------------------------------------
-Ran 14 tests in 9.888s
-
-OK
-```
+- 📄 **Render Deployment**: [`render.yaml`](render.yaml) automatically provisions backend & dashboard Python services.
+- 📄 **Vercel Deployment**: [`vercel.json`](vercel.json) provisions the static frontend.
+- 📄 **Azure Deployment**: Run [`scripts/deploy_azure.ps1`](scripts/deploy_azure.ps1) for Azure Container Apps or Azure for Students B1s Free VM.
 
 ---
 
@@ -281,5 +247,5 @@ OK
 
 <div align="center">
   <b>Built for AI Build 2026 · Cart Rescue Track</b><br/>
-  <i>CartGuard AI Team: M1 (ML), M2 (LLM), M3 (Backend), M4 (Product)</i>
+  <i>CartGuard AI Team: Swathi & Team</i>
 </div>
