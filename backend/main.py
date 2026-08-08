@@ -82,24 +82,6 @@ frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if os.path.exists(frontend_path):
     app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
-@app.get("/", response_class=FileResponse, tags=["Pages"])
-@app.get("/overview", response_class=FileResponse, tags=["Pages"])
-@app.get("/scenarios", response_class=FileResponse, tags=["Pages"])
-async def serve_overview():
-    return FileResponse(os.path.join(frontend_path, "index.html"))
-
-@app.get("/audit-trail", response_class=FileResponse, tags=["Pages"])
-async def serve_audit_trail():
-    return FileResponse(os.path.join(frontend_path, "audit_trail.html"))
-
-@app.get("/twilio-hub", response_class=FileResponse, tags=["Pages"])
-async def serve_twilio_hub():
-    return FileResponse(os.path.join(frontend_path, "twilio_hub.html"))
-
-@app.get("/margin-analytics", response_class=FileResponse, tags=["Pages"])
-async def serve_margin_analytics():
-    return FileResponse(os.path.join(frontend_path, "margin_analytics.html"))
-
 
 @app.get("/health", tags=["System"])
 @app.get("/api/v1/health", tags=["System"])
@@ -110,6 +92,29 @@ async def health_check():
         "engine": "FastAPI + Ensemble ML",
         "timestamp": datetime.now().isoformat()
     }
+
+
+# ──────────────────────────── Page Routes ────────────────────────────
+@app.get("/", response_class=FileResponse, tags=["Pages"])
+@app.get("/overview", response_class=FileResponse, tags=["Pages"])
+@app.get("/scenarios", response_class=FileResponse, tags=["Pages"])
+async def serve_overview():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
+
+
+@app.get("/audit-trail", response_class=FileResponse, tags=["Pages"])
+async def serve_audit_trail():
+    return FileResponse(os.path.join(frontend_path, "audit_trail.html"))
+
+
+@app.get("/twilio-hub", response_class=FileResponse, tags=["Pages"])
+async def serve_twilio_hub():
+    return FileResponse(os.path.join(frontend_path, "twilio_hub.html"))
+
+
+@app.get("/margin-analytics", response_class=FileResponse, tags=["Pages"])
+async def serve_margin_analytics():
+    return FileResponse(os.path.join(frontend_path, "margin_analytics.html"))
 
 
 # ──────────────────────────── Request / Response Models ────────────────────────────
@@ -279,26 +284,11 @@ def build_action_response(request_dict: Dict[str, Any], result: Dict[str, Any], 
 
 # ──────────────────────────── API Endpoints ────────────────────────────
 
-@app.get("/", tags=["Health"])
-async def root():
-    return {"status": "ok", "service": "CartGuard AI API", "version": "2.0.0"}
-
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health monitoring endpoint."""
-    return {"status": "ok", "timestamp": time.time()}
-
-
 @app.get("/metrics", tags=["Metrics"])
-async def get_metrics():
-    """Prometheus-style metrics endpoint."""
-    return audit_service.get_metrics()
-
-
 @app.get("/api/v1/metrics", tags=["Metrics"])
-async def get_metrics_v1():
-    """Metrics endpoint alias."""
+@app.get("/api/v1/metrics/summary", tags=["Metrics"])
+async def get_metrics():
+    """Aggregated performance metrics (Prometheus-compatible + dashboard summary)."""
     return audit_service.get_metrics()
 
 
@@ -456,14 +446,22 @@ async def run_demo_scenario(scenario_name: str):
 
 
 @app.post("/api/v1/send-test-email", tags=["Notifications"])
-async def send_test_email(to_email: str = "yuvagude@gmail.com", discount_percent: float = 10.0):
+async def send_test_email(
+    to_email: str = "demo@cartguard.ai",
+    discount_percent: float = 10.0,
+    cart_value: float = 1500.0
+):
     """
-    Send a test cart recovery email to high priority user (e.g. yuvagude@gmail.com).
+    Send a test cart recovery email.
+    cart_value, discount_percent, and to_email are fully dynamic query params.
     """
-    session_id = f"SES-YUVA-{int(time.time())}"
-    message = f"Notice you left items in your cart! As a valued high-priority customer, enjoy an exclusive {int(discount_percent)}% discount (promo code: SAVE{int(discount_percent)}) to complete your purchase today."
-    cart_value = 1500.0
+    session_id = f"SES-TEST-{int(time.time())}"
     discount_amount = cart_value * (discount_percent / 100.0)
+    message = (
+        f"We noticed items in your cart worth ₹{cart_value:,.0f}! "
+        f"As a valued customer, enjoy an exclusive {int(discount_percent)}% discount "
+        f"(promo code: SAVE{int(discount_percent)}) to complete your purchase today."
+    )
 
     res = await notification_service.send_email(
         to_email=to_email,
@@ -477,9 +475,21 @@ async def send_test_email(to_email: str = "yuvagude@gmail.com", discount_percent
         "session_id": session_id,
         "risk_score": 0.88,
         "risk_level": "HIGH",
-        "diagnosis": {"root_cause": "PRICE_SENSITIVITY", "confidence": 0.94, "evidence": ["High priority user profile", f"Cart value ₹{cart_value:.0f}", "Price check activity"]},
-        "action": {"action_type": "LIMITED_OFFER", "channel": "EMAIL", "message": message, "discount_amount": discount_amount},
-        "policy": {"uplift_probability": 0.35, "expected_incremental_margin_inr": 225.0},
+        "diagnosis": {
+            "root_cause": "PRICE_SENSITIVITY",
+            "confidence": 0.94,
+            "evidence": ["Test email triggered manually", f"Cart value ₹{cart_value:.0f}"]
+        },
+        "action": {
+            "action_type": "LIMITED_OFFER",
+            "channel": "EMAIL",
+            "message": message,
+            "discount_amount": discount_amount
+        },
+        "policy": {
+            "uplift_probability": 0.35,
+            "expected_incremental_margin_inr": cart_value * 0.25 * 0.35
+        },
         "self_check": {"status": "PASSED"},
         "metrics": {"total_latency_ms": 142.0, "total_cost_inr": 0.0512},
         "signals": {"price_sensitivity": 0.85, "urgency_score": 0.90}
@@ -491,15 +501,65 @@ async def send_test_email(to_email: str = "yuvagude@gmail.com", discount_percent
         "session_id": session_id,
         "to_email": to_email,
         "discount_percent": discount_percent,
-        "discount_amount": discount_amount
+        "discount_amount": round(discount_amount, 2),
+        "cart_value": cart_value,
     }
 
 
 @app.post("/api/v1/demo/seed", tags=["Demo"])
 async def seed_demo_data():
-    """Seed dummy audit records into database."""
-    conn = audit_service.init_db()
-    return {"status": "success", "message": "Audit database initialized and dummy records seeded."}
+    """Re-initialize the audit database and ensure seed records exist."""
+    audit_service.init_db()  # init_db returns None; idempotent — safe to call multiple times
+    metrics = audit_service.get_metrics()
+    return {
+        "status": "success",
+        "message": "Audit database initialized and demo records seeded.",
+        "total_records": metrics.get("total_sessions", 0),
+    }
+
+
+@app.post("/api/v1/uplift/simulate", tags=["Uplift"])
+async def simulate_uplift(n_sessions: int = 10000, seed: int = 42):
+    """
+    Run synthetic A/B test uplift simulation.
+    Returns statistical significance, conversion rate uplift, and margin impact.
+    """
+    from services.uplift_service import uplift_simulator
+    result = uplift_simulator.simulate_ab_test(n_sessions=n_sessions, seed=seed)
+    return result
+
+
+@app.post("/api/v1/uplift/session", tags=["Uplift"])
+async def calculate_session_uplift(
+    risk_score: float = 0.75,
+    root_cause: str = "PAYMENT_FAILURE",
+    cart_value: float = 2000.0,
+    proposed_discount: float = 0.0,
+):
+    """
+    Calculate expected incremental margin uplift for a specific session context.
+    Returns expected uplift probability, incremental margin, and ROI.
+    """
+    from services.uplift_service import uplift_simulator
+    result = uplift_simulator.calculate_session_uplift(
+        risk_score=risk_score,
+        root_cause=root_cause,
+        cart_value=cart_value,
+        proposed_discount=proposed_discount,
+    )
+    return result
+
+
+@app.post("/api/v1/outcome/{session_id}", tags=["Audit"])
+async def record_session_outcome(session_id: str, outcome: str = "RECOVERED"):
+    """
+    Record the actual conversion outcome for a previously scored session.
+    outcome: RECOVERED | ABANDONED | PENDING
+    """
+    if outcome not in ("RECOVERED", "ABANDONED", "PENDING"):
+        raise HTTPException(status_code=400, detail="outcome must be RECOVERED, ABANDONED, or PENDING")
+    audit_service.record_outcome(session_id, outcome)
+    return {"status": "recorded", "session_id": session_id, "outcome": outcome}
 
 
 # ──────────────────────────── Demo Scenarios ────────────────────────────

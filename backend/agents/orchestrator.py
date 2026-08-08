@@ -11,6 +11,10 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 import httpx
 
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.settings import settings
+
 
 @dataclass
 class AgentMessage:
@@ -308,8 +312,8 @@ class PolicyAgent:
     name = "PolicyAgent"
 
     def __init__(self):
-        self.per_user_budget = 500.0
-        self.per_campaign_budget = 50000.0
+        self.per_user_budget = settings.PER_USER_BUDGET_INR
+        self.per_campaign_budget = settings.PER_CAMPAIGN_BUDGET_INR
         self.campaign_spend = 0.0
 
     async def evaluate(
@@ -382,7 +386,7 @@ class PolicyAgent:
         """Get list of allowed actions given constraints."""
         actions = ["DO_NOTHING"]
         
-        if risk_score < 0.55:
+        if risk_score < settings.MIN_RISK_SCORE_FOR_ACTION:
             return actions
         
         actions.append("IN_APP_NUDGE")
@@ -785,7 +789,7 @@ class OrchestratorAgent:
 
         # Step 3: Diagnose (only for medium/high risk)
         risk_score = risk_result.get("risk_score", 0)
-        if risk_score >= 0.55:
+        if risk_score >= settings.MEDIUM_RISK_THRESHOLD:
             diagnosis = await self.diagnosis_agent.diagnose(session_data, signals, risk_result)
         else:
             diagnosis = {"root_cause": "LOW_RISK", "confidence": 0.9, "evidence": [], "recommendation": "DO_NOTHING", "latency_ms": 0, "cost_inr": 0.001}
@@ -814,7 +818,11 @@ class OrchestratorAgent:
         return {
             "session_id": session_data.get("session_id"),
             "risk_score": risk_score,
-            "risk_level": "HIGH" if risk_score > 0.75 else "MEDIUM" if risk_score > 0.55 else "LOW",
+            "risk_level": (
+                "HIGH" if risk_score > settings.HIGH_RISK_THRESHOLD
+                else "MEDIUM" if risk_score > settings.MEDIUM_RISK_THRESHOLD
+                else "LOW"
+            ),
             "signals": signals.get("signals", {}),
             "model_scores": risk_result.get("model_scores", {}),
             "diagnosis": {

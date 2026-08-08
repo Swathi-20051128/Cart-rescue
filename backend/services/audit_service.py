@@ -79,7 +79,7 @@ class AuditService:
                 "PRICE_SENSITIVITY", 0.94, "LIMITED_OFFER", "EMAIL", 150.0, 0.35, 225.0,
                 "PASSED", 142.0, 0.0512,
                 json.dumps({"price_sensitivity": 0.85, "urgency_score": 0.90, "hesitation_score": 0.70}),
-                json.dumps({"user_email": "yuvagude@gmail.com", "user_segment": "PREMIUM", "cart_value": 1500.0, "action": {"action_type": "LIMITED_OFFER", "discount_amount": 150.0, "message": "🎁 Special 10% Off Your Saved Cart!"}})
+                json.dumps({"user_email": "demo.user@cartguard.ai", "user_segment": "PREMIUM", "cart_value": 1500.0, "action": {"action_type": "LIMITED_OFFER", "discount_amount": 150.0, "message": "🎁 Special 10% Off Your Saved Cart!"}})
             ),
             (
                 datetime.utcnow().isoformat(), "SES-8X92M", "USR-8812", 0.84, "HIGH",

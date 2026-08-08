@@ -62,7 +62,9 @@ class BehavioralSignalGenerator:
         """
         Price sensitivity = removing items, comparing categories, volatile cart value.
         """
-        # Volatile cart value changes
+        # Volatile cart value changes — guard against None inputs
+        original_cart_value = float(original_cart_value) if original_cart_value is not None else float(current_cart_value)
+        current_cart_value = float(current_cart_value) if current_cart_value is not None else 100.0
         value_change_ratio = abs(original_cart_value - current_cart_value) / max(
             original_cart_value, 1
         )
@@ -210,7 +212,7 @@ class BehavioralSignalGenerator:
             cart_value_changes=sd.get("cart_value_changes", 0),
             product_views=sd.get("product_views", 0),
             category_switches=sd.get("category_switches", 0),
-            original_cart_value=sd.get("original_cart_value") or sd.get("cart_value") or 100,
+            original_cart_value=sd.get("original_cart_value") or sd.get("cart_value") or 100.0,
             current_cart_value=sd.get("cart_value", 100),
         )
 
