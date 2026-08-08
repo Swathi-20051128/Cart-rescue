@@ -132,6 +132,12 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
+    /* Plotly SVG text override for high contrast */
+    .js-plotly-plot .plotly text, .js-plotly-plot .plotly .gtitle, .js-plotly-plot .plotly .xtitle, .js-plotly-plot .plotly .ytitle {
+        fill: #0b2e59 !important;
+        font-weight: 600 !important;
+    }
+
     /* Sidebar */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
@@ -282,7 +288,7 @@ if "🏠 Dashboard" in page:
                 fig.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    font_color="white",
+                    font_color="#0b2e59",
                 )
                 st.plotly_chart(fig, use_container_width=True)
         
@@ -301,7 +307,7 @@ if "🏠 Dashboard" in page:
                 fig.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    font_color="white",
+                    font_color="#0b2e59",
                     showlegend=False,
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -463,7 +469,7 @@ elif "🔬 Score Session" in page:
                             {"range": [75, 100], "color": "#3a1a1a"},
                         ],
                         "threshold": {
-                            "line": {"color": "white", "width": 3},
+                            "line": {"color": "#0b2e59", "width": 3},
                             "thickness": 0.75,
                             "value": risk_score * 100,
                         },
@@ -471,7 +477,7 @@ elif "🔬 Score Session" in page:
                 ))
                 fig.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="white",
+                    font_color="#0b2e59",
                     height=300,
                 )
                 st.plotly_chart(fig, use_container_width=True)
@@ -630,7 +636,7 @@ elif "🔬 Score Session" in page:
                         color=list(agent_latencies.values()),
                         color_continuous_scale="viridis",
                     )
-                    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
+                    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="#0b2e59")
                     st.plotly_chart(fig, use_container_width=True)
             
             # Full JSON
@@ -823,12 +829,12 @@ elif "📊 Uplift Analysis" in page:
         fig.add_shape(type="rect", x0=ci_low, x1=ci_high, y0=0.3, y1=0.7,
                       fillcolor="rgba(102,126,234,0.3)", line_color="rgba(102,126,234,0.8)")
         fig.add_vline(x=uplift_val, line_color="#764ba2", line_width=3)
-        fig.add_vline(x=0, line_color="white", line_dash="dash")
+        fig.add_vline(x=0, line_color="#94a3b8", line_dash="dash")
         fig.update_layout(
             title=f"95% CI for Uplift: [{ci_low:.1f}pp, {ci_high:.1f}pp]",
             xaxis_title="Conversion Rate Uplift (percentage points)",
             paper_bgcolor="rgba(0,0,0,0)",
-            font_color="white",
+            font_color="#0b2e59",
             height=200,
         )
         st.plotly_chart(fig, use_container_width=True)
