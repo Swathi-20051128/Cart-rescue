@@ -7,10 +7,19 @@ import os
 import asyncio
 from typing import Dict, Any, Optional
 import httpx
+from dotenv import load_dotenv
+
+# Ensure environment variables from root .env are loaded
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 
 class NotificationService:
     def __init__(self):
+        self.reload_config()
+
+    def reload_config(self):
+        """Reload configuration from environment variables."""
         self.sendgrid_key = os.getenv("SENDGRID_API_KEY", "")
         self.twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
         self.twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "")
@@ -18,27 +27,48 @@ class NotificationService:
         self.from_email = os.getenv("FROM_EMAIL", "noreply@cartguard.ai")
 
     async def send_notification(self, session_data: Dict[str, Any], action: Dict[str, Any]):
-        """Send notification based on action channel."""
-        channel = action.get("channel", "IN_APP")
+        """Send notification based on action channel and available user contacts."""
+        action_type = action.get("action_type", "DO_NOTHING")
         message = action.get("message", "")
         
-        if not message or channel == "DO_NOTHING" or channel == "IN_APP":
-            return {"status": "skipped", "reason": "in-app or no action"}
+        if not message or action_type == "DO_NOTHING":
+            print("[NOTIFICATION] Skipped: Action is DO_NOTHING or message is empty.")
+            return {"status": "skipped", "reason": "no action or DO_NOTHING"}
+
+        channel = action.get("channel", "IN_APP")
+        
+        user_phone = (
+            session_data.get("user_phone")
+            or session_data.get("user_mobile")
+            or session_data.get("user_whatsapp")
+            or ""
+        )
+        user_email = session_data.get("user_email") or ""
+
+        # Auto-promote channel from IN_APP to WHATSAPP/SMS/EMAIL if contact info is provided
+        if channel in ["IN_APP", "NONE"]:
+            if session_data.get("user_whatsapp") or (user_phone and session_data.get("whatsapp_opt_in")):
+                channel = "WHATSAPP"
+            elif user_phone:
+                channel = "SMS"
+            elif user_email:
+                channel = "EMAIL"
 
         # Consent check
         if not self._check_consent(session_data, channel):
-            return {"status": "skipped", "reason": "consent not given or DND registered"}
+            print(f"[NOTIFICATION SKIPPED] Consent check failed for channel={channel}")
+            return {"status": "skipped", "reason": f"consent check failed for {channel}"}
 
         if channel == "EMAIL":
             return await self.send_email(
-                to_email=session_data.get("user_email", ""),
+                to_email=user_email,
                 subject="Your cart is waiting! 🛒",
                 message=message,
                 discount=action.get("discount_amount", 0),
             )
         elif channel in ["SMS", "WHATSAPP"]:
             return await self.send_sms(
-                to_number=session_data.get("user_phone", ""),
+                to_number=user_phone,
                 message=message,
                 channel=channel,
             )
@@ -51,9 +81,23 @@ class NotificationService:
             return False
         if channel == "EMAIL" and not session_data.get("email_opt_in", True):
             return False
-        if channel == "WHATSAPP" and not session_data.get("whatsapp_opt_in", False):
+        if channel == "WHATSAPP" and session_data.get("whatsapp_opt_in") is False:
             return False
         return True
+
+    def _format_phone(self, phone: str) -> str:
+        """Format phone number into E.164 standard (e.g. +919876543210)."""
+        if not phone:
+            return ""
+        p = phone.strip().replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        if not p:
+            return ""
+        if not p.startswith("+"):
+            if len(p) == 10:
+                p = "+91" + p
+            else:
+                p = "+" + p
+        return p
 
     async def send_email(
         self,
@@ -107,8 +151,10 @@ class NotificationService:
                     },
                     timeout=10.0,
                 )
+                print(f"[EMAIL SENT] Status {response.status_code} to {to_email}")
                 return {"status": "sent", "channel": "email", "status_code": response.status_code}
         except Exception as e:
+            print(f"[EMAIL ERROR] {str(e)}")
             return {"status": "error", "error": str(e)}
 
     async def send_sms(
@@ -118,8 +164,9 @@ class NotificationService:
         channel: str = "SMS",
     ) -> Dict[str, Any]:
         """Send SMS/WhatsApp via Twilio."""
-        if not self.twilio_sid or not to_number:
-            print(f"[{channel} MOCK] To: {to_number} | Message: {message}")
+        formatted_num = self._format_phone(to_number)
+        if not self.twilio_sid or not formatted_num:
+            print(f"[{channel} MOCK] To: '{formatted_num}' (Twilio SID present: {bool(self.twilio_sid)}) | Message: {message}")
             return {"status": "mock_sent", "channel": channel.lower()}
 
         try:
@@ -127,8 +174,10 @@ class NotificationService:
             from_number = (
                 f"whatsapp:{self.twilio_from}" if channel == "WHATSAPP" else self.twilio_from
             )
-            to = f"whatsapp:{to_number}" if channel == "WHATSAPP" else to_number
+            to = f"whatsapp:{formatted_num}" if channel == "WHATSAPP" else formatted_num
             
+            print(f"[{channel} DISPATCHING] To: {to} | From: {from_number} | Msg: {message[:50]}...")
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     url,
@@ -137,12 +186,14 @@ class NotificationService:
                     timeout=10.0,
                 )
                 data = response.json()
-                return {
-                    "status": "sent",
-                    "channel": channel.lower(),
-                    "sid": data.get("sid"),
-                }
+                if response.status_code in [200, 201]:
+                    print(f"[{channel} SUCCESS] SID: {data.get('sid')}")
+                    return {"status": "sent", "channel": channel.lower(), "sid": data.get("sid")}
+                else:
+                    print(f"[{channel} TWILIO ERROR] Status {response.status_code}: {data.get('message', data)}")
+                    return {"status": "error", "error": data.get("message", response.text), "code": data.get("code")}
         except Exception as e:
+            print(f"[{channel} EXCEPTION] {str(e)}")
             return {"status": "error", "error": str(e)}
 
 
