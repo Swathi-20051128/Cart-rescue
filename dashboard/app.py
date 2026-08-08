@@ -296,7 +296,7 @@ with st.sidebar:
     
     page = st.selectbox(
         "Navigation",
-        ["🏠 Dashboard", "🔬 Score Session", "⚡ Batch Scoring", "🎭 Demo Scenarios", "📊 Uplift Analysis", "📋 Audit Log"],
+        ["🏠 Dashboard", "🎯 Feature Scope & 15 Scenarios", "🔬 Score Session", "⚡ Batch Scoring", "🎭 Demo Scenarios", "📊 Uplift Analysis", "📋 Audit Log"],
     )
     
     st.divider()
@@ -430,6 +430,311 @@ Signal Agent               Risk Agent (ML)          Context Agent
                         ▼
             Audit Log (SQLite → PostgreSQL)
         """, language="text")
+
+
+# ── Feature Scope & 15 Evaluation Scenarios Page ──────────────────────────────
+elif "🎯 Feature Scope" in page:
+    st.title("🎯 Feature Scope & 15 Evaluation Scenarios")
+    st.caption("Explore the 50-Feature Engineering Taxonomy and 15 Real-World Evaluation Scenarios demonstrating CartGuard AI's precision diagnosis & margin-protection intelligence.")
+
+    tab_scenarios, tab_features = st.tabs(["🚨 15 Real-World Evaluation Scenarios", "📊 50-Feature Taxonomy Explorer"])
+
+    with tab_features:
+        st.subheader("📊 50-Feature Engineering Taxonomy Explorer")
+        st.caption("Engineered across 5 behavioral categories to capture micro-friction signals, intent indicators, and e-commerce dynamics.")
+
+        with st.expander("1️⃣ Behavioral & Engagement Features (1–12)", expanded=True):
+            st.dataframe(pd.DataFrame([
+                {"#": 1, "Feature Name": "total_session_duration", "Type": "Integer (s)", "Business Significance": "Total time spent by user from first to last event"},
+                {"#": 2, "Feature Name": "total_page_views", "Type": "Integer", "Business Significance": "Total product listings or pages browsed"},
+                {"#": 3, "Feature Name": "unique_products_viewed", "Type": "Integer", "Business Significance": "Count of distinct product IDs looked at (comparison intent)"},
+                {"#": 4, "Feature Name": "unique_categories_viewed", "Type": "Integer", "Business Significance": "Number of different product categories explored"},
+                {"#": 5, "Feature Name": "avg_time_per_page", "Type": "Float (s)", "Business Significance": "Average duration spent per page view"},
+                {"#": 6, "Feature Name": "max_time_on_single_page", "Type": "Float (s)", "Business Significance": "Highest time spent on one product (reading reviews)"},
+                {"#": 7, "Feature Name": "bounce_rate_indicator", "Type": "Binary (0/1)", "Business Significance": "1 if session ended in <15s with 1 page view"},
+                {"#": 8, "Feature Name": "scroll_depth_max", "Type": "Float (%)", "Business Significance": "Maximum percentage of page scrolled down"},
+                {"#": 9, "Feature Name": "click_velocity", "Type": "Float (clicks/s)", "Business Significance": "Click count divided by total session duration"},
+                {"#": 10, "Feature Name": "inactive_time_max", "Type": "Float (s)", "Business Significance": "Longest idle gap between actions (distraction indicator)"},
+                {"#": 11, "Feature Name": "search_bar_usage_count", "Type": "Integer", "Business Significance": "Number of internal search bar queries executed"},
+                {"#": 12, "Feature Name": "filter_sort_usage_count", "Type": "Integer", "Business Significance": "Number of price/rating filters or sort tools applied"}
+            ]), use_container_width=True, hide_index=True)
+
+        with st.expander("2️⃣ Cart & Inventory Dynamics (13–24)"):
+            st.dataframe(pd.DataFrame([
+                {"#": 13, "Feature Name": "total_cart_adds", "Type": "Integer", "Business Significance": "Total 'Add to Cart' button clicks"},
+                {"#": 14, "Feature Name": "total_cart_removes", "Type": "Integer", "Business Significance": "Total items removed from cart"},
+                {"#": 15, "Feature Name": "net_cart_quantity", "Type": "Integer", "Business Significance": "Total remaining items sitting in cart (adds - removes)"},
+                {"#": 16, "Feature Name": "current_cart_value", "Type": "Float (₹)", "Business Significance": "Total monetary value of items currently in cart"},
+                {"#": 17, "Feature Name": "max_cart_value_reached", "Type": "Float (₹)", "Business Significance": "Peak cart monetary value during session"},
+                {"#": 18, "Feature Name": "cart_value_change_ratio", "Type": "Float (ratio)", "Business Significance": "Ratio of final cart value to peak cart value"},
+                {"#": 19, "Feature Name": "avg_item_price_in_cart", "Type": "Float (₹)", "Business Significance": "Average price per item sitting in cart"},
+                {"#": 20, "Feature Name": "max_item_price_in_cart", "Type": "Float (₹)", "Business Significance": "Price of most expensive single item in cart"},
+                {"#": 21, "Feature Name": "cart_addition_frequency", "Type": "Float (s)", "Business Significance": "Average time interval between adding items to cart"},
+                {"#": 22, "Feature Name": "wishlist_adds_count", "Type": "Integer", "Business Significance": "Items moved to wishlist or saved for later"},
+                {"#": 23, "Feature Name": "out_of_stock_triggers", "Type": "Integer", "Business Significance": "Attempts to add out-of-stock items (inventory error)"},
+                {"#": 24, "Feature Name": "coupon_code_entered_count", "Type": "Integer", "Business Significance": "Number of promo codes typed into coupon box"}
+            ]), use_container_width=True, hide_index=True)
+
+        with st.expander("3️⃣ Checkout & Payment Friction (25–36)"):
+            st.dataframe(pd.DataFrame([
+                {"#": 25, "Feature Name": "checkout_reached", "Type": "Binary (0/1)", "Business Significance": "1 if user reached shipping/checkout page"},
+                {"#": 26, "Feature Name": "checkout_page_duration", "Type": "Float (s)", "Business Significance": "Time spent specifically on checkout/payment stages"},
+                {"#": 27, "Feature Name": "shipping_info_submitted", "Type": "Binary (0/1)", "Business Significance": "1 if address details were successfully submitted"},
+                {"#": 28, "Feature Name": "payment_page_reached", "Type": "Binary (0/1)", "Business Significance": "1 if user reached final payment selection screen"},
+                {"#": 29, "Feature Name": "payment_attempts", "Type": "Integer", "Business Significance": "Total payment submission button clicks"},
+                {"#": 30, "Feature Name": "payment_failures", "Type": "Integer", "Business Significance": "Count of failed gateway/bank payment responses"},
+                {"#": 31, "Feature Name": "upi_payment_selected", "Type": "Binary (0/1)", "Business Significance": "1 if UPI / Google Pay / PhonePe selected"},
+                {"#": 32, "Feature Name": "netbanking_selected", "Type": "Binary (0/1)", "Business Significance": "1 if Net Banking selected"},
+                {"#": 33, "Feature Name": "cod_selected", "Type": "Binary (0/1)", "Business Significance": "1 if Cash on Delivery selected"},
+                {"#": 34, "Feature Name": "card_payment_selected", "Type": "Binary (0/1)", "Business Significance": "1 if Credit/Debit Card chosen"},
+                {"#": 35, "Feature Name": "shipping_cost_viewed", "Type": "Binary (0/1)", "Business Significance": "1 if shipping fee calculation block was viewed"},
+                {"#": 36, "Feature Name": "tax_breakup_viewed", "Type": "Binary (0/1)", "Business Significance": "1 if tax/hidden fee breakdown block was opened"}
+            ]), use_container_width=True, hide_index=True)
+
+        with st.expander("4️⃣ Temporal & Contextual Features (37–44)"):
+            st.dataframe(pd.DataFrame([
+                {"#": 37, "Feature Name": "hour_of_day", "Type": "Integer (0-23)", "Business Significance": "Session start hour (late-night vs daytime shopping)"},
+                {"#": 38, "Feature Name": "day_of_week", "Type": "Integer (0-6)", "Business Significance": "Day of week (weekday vs weekend drop-off patterns)"},
+                {"#": 39, "Feature Name": "is_weekend", "Type": "Binary (0/1)", "Business Significance": "1 if Saturday or Sunday"},
+                {"#": 40, "Feature Name": "is_peak_shopping_hour", "Type": "Binary (0/1)", "Business Significance": "1 if session occurred between 6 PM and 11 PM"},
+                {"#": 41, "Feature Name": "device_type_mobile", "Type": "Binary (0/1)", "Business Significance": "1 if mobile phone user (higher form friction)"},
+                {"#": 42, "Feature Name": "device_type_desktop", "Type": "Binary (0/1)", "Business Significance": "1 if desktop user"},
+                {"#": 43, "Feature Name": "traffic_source_organic", "Type": "Binary (0/1)", "Business Significance": "1 if user arrived via search engine/organic"},
+                {"#": 44, "Feature Name": "traffic_source_ads", "Type": "Binary (0/1)", "Business Significance": "1 if user arrived via paid ads/marketing"}
+            ]), use_container_width=True, hide_index=True)
+
+        with st.expander("5️⃣ Historical & Customer Profile Features (45–50)"):
+            st.dataframe(pd.DataFrame([
+                {"#": 45, "Feature Name": "is_returning_customer", "Type": "Binary (0/1)", "Business Significance": "1 if user exists in database, 0 if guest"},
+                {"#": 46, "Feature Name": "historical_purchase_count", "Type": "Integer", "Business Significance": "Total completed orders by this user in past"},
+                {"#": 47, "Feature Name": "historical_abandonment_rate", "Type": "Float (0-1)", "Business Significance": "Percentage of past sessions where cart was abandoned"},
+                {"#": 48, "Feature Name": "avg_historical_order_value", "Type": "Float (₹)", "Business Significance": "Average order value of past successful purchases"},
+                {"#": 49, "Feature Name": "days_since_last_visit", "Type": "Integer", "Business Significance": "Recency metric counting days since last visit"},
+                {"#": 50, "Feature Name": "past_discount_sensitivity_score", "Type": "Float (0-1)", "Business Significance": "Measures if user only buys when coupons are active"}
+            ]), use_container_width=True, hide_index=True)
+
+    with tab_scenarios:
+        st.subheader("🚨 15 Real-World Evaluation Scenarios")
+        st.caption("Run pre-configured real-world e-commerce evaluation scenarios to test multi-agent diagnosis, policy guardrails, and precision remediation.")
+
+        scenarios_data_15 = [
+            {
+                "id": 1,
+                "title": "🚨 Scenario 1: The Payment Failure Victim",
+                "subtitle": "Technical Drop-off (UPI / Bank Server Timeout)",
+                "story": "A shopper spends 15 mins selecting ₹4,500 worth of goods, reaches checkout, but hits a wall when UPI fails twice due to bank server timeout. Frustrated, they close the tab.",
+                "triggers": ["checkout_reached = 1", "payment_attempts = 2", "payment_failures = 2", "total_session_duration = 900s", "cart_value = ₹4,500"],
+                "risk_expected": "0.92 (High Risk)",
+                "cause_expected": "PAYMENT_FAILURE",
+                "action_expected": "ALTERNATE_PAYMENT_GUIDANCE",
+                "why_impresses": "Proves your system isn't wasting money on discounts when the customer wanted to buy, but technical friction stopped them.",
+                "session_data": {"session_id": "SCEN_1", "cart_value": 4500, "session_duration": 900, "product_views": 6, "cart_adds": 3, "checkout_steps_completed": 4, "payment_attempts": 2, "payment_failures": 2, "time_on_payment_page": 180, "is_returning_visitor": True}
+            },
+            {
+                "id": 2,
+                "title": "💸 Scenario 2: The Price Hesitator",
+                "subtitle": "Economic Drop-off (High Cart & Tax/Shipping Hesitation)",
+                "story": "A user views 12 products, selects an ₹8,000 jacket, and hovers on checkout. They repeatedly view tax and shipping cost breakdowns without attempting payment.",
+                "triggers": ["current_cart_value = ₹8,000", "unique_products_viewed = 12", "shipping_cost_viewed = 1", "tax_breakup_viewed = 1", "payment_attempts = 0"],
+                "risk_expected": "0.85 (High Risk)",
+                "cause_expected": "PRICE_SENSITIVITY",
+                "action_expected": "LIMITED_OFFER (5% Coupon)",
+                "why_impresses": "The discount is deployed ONLY because price hesitation was detected, and it checks against your budget rule before executing.",
+                "session_data": {"session_id": "SCEN_2", "cart_value": 8000, "session_duration": 480, "product_views": 12, "cart_adds": 1, "checkout_steps_completed": 3, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 3,
+                "title": "🛋️ Scenario 3: The Casual Window Shopper",
+                "subtitle": "Low Intent (Lunch Break Browsing)",
+                "story": "A mobile user browses 25 pages rapidly, adds one ₹150 item, and leaves within 45 seconds without ever looking at the checkout page.",
+                "triggers": ["total_page_views = 25", "total_session_duration = 45s", "checkout_reached = 0", "net_cart_quantity = 1", "cart_value = ₹150"],
+                "risk_expected": "0.35 (Low Risk)",
+                "cause_expected": "LOW_INTENT",
+                "action_expected": "DO_NOTHING",
+                "why_impresses": "Highlights your margin-protection intelligence. Most naive apps would spam this user with a discount email. Your system recognizes it's just casual browsing.",
+                "session_data": {"session_id": "SCEN_3", "cart_value": 150, "session_duration": 45, "product_views": 25, "cart_adds": 1, "checkout_steps_completed": 0, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 4,
+                "title": "🔄 Scenario 4: The Cart Reminder Prospect",
+                "subtitle": "Friction / Distraction (Idle Gap at Shipping Step)",
+                "story": "A returning customer submits shipping details, but gets distracted by a phone call. Long idle gap (300s) detected without payment attempts.",
+                "triggers": ["is_returning_customer = 1", "checkout_reached = 1", "shipping_info_submitted = 1", "payment_attempts = 0", "inactive_time_max = 300s"],
+                "risk_expected": "0.78 (High Risk)",
+                "cause_expected": "CHECKOUT_FRICTION",
+                "action_expected": "CART_REMINDER (WhatsApp / Email)",
+                "why_impresses": "Matches the exact stage of the funnel the user left off on, providing a contextual nudge rather than a blanket coupon.",
+                "session_data": {"session_id": "SCEN_4", "cart_value": 2200, "session_duration": 360, "product_views": 3, "cart_adds": 2, "checkout_steps_completed": 2, "payment_attempts": 0, "is_returning_visitor": True}
+            },
+            {
+                "id": 5,
+                "title": "🚫 Scenario 5: The Discount Abuser",
+                "subtitle": "Policy-Restricted (Coupon Limit Breached)",
+                "story": "A frequent shopper with 80% past abandonment reaches high risk again. However, your database shows they have already received 3 promo codes this week.",
+                "triggers": ["historical_abandonment_rate = 0.80", "past_discount_sensitivity = 0.95", "coupon_code_entered_count = 3"],
+                "risk_expected": "0.88 (High Risk)",
+                "cause_expected": "DISCOUNT_ABUSE_RISK",
+                "action_expected": "DO_NOTHING / CUSTOMER_SUPPORT_NUDGE",
+                "why_impresses": "Proves your policy engine factors in business guardrails and financial constraints, not just raw machine learning predictions.",
+                "session_data": {"session_id": "SCEN_5", "cart_value": 3100, "session_duration": 300, "product_views": 5, "cart_adds": 3, "checkout_steps_completed": 3, "payment_attempts": 0, "is_returning_visitor": True}
+            },
+            {
+                "id": 6,
+                "title": "📱 Scenario 6: The Mobile UX Frustration",
+                "subtitle": "Form Friction / UX Drop-off",
+                "story": "A user on an Android mobile device adds items, clicks checkout, but form field layout lagging causes 400s duration on single form page. Bounces before payment.",
+                "triggers": ["device_type_mobile = 1", "checkout_reached = 1", "checkout_page_duration = 400s", "payment_attempts = 0"],
+                "risk_expected": "0.81 (High Risk)",
+                "cause_expected": "FORM_FRICTION",
+                "action_expected": "CUSTOMER_SUPPORT_NUDGE (Chat / Simplified Link)",
+                "why_impresses": "Shows you understand mobile-specific behaviors in Indian e-commerce where form-filling fatigue is a major conversion killer.",
+                "session_data": {"session_id": "SCEN_6", "cart_value": 1800, "session_duration": 480, "product_views": 4, "cart_adds": 2, "checkout_steps_completed": 2, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 7,
+                "title": "📦 Scenario 7: The Out-of-Stock Disappointment",
+                "subtitle": "Inventory / Stock Out Friction",
+                "story": "High-value item in cart, reaches final checkout step, inventory error triggers out-of-stock. Annoyed, they abandon cart immediately.",
+                "triggers": ["out_of_stock_triggers = 1", "checkout_reached = 1", "current_cart_value = ₹5,500"],
+                "risk_expected": "0.89 (High Risk)",
+                "cause_expected": "STOCK_OUT_FRICTION",
+                "action_expected": "CUSTOMER_SUPPORT_NUDGE (Alternative Suggestions)",
+                "why_impresses": "Proves your system accounts for backend operational realities, not just digital navigation.",
+                "session_data": {"session_id": "SCEN_7", "cart_value": 5500, "session_duration": 320, "product_views": 5, "cart_adds": 2, "checkout_steps_completed": 3, "payment_attempts": 0, "is_returning_visitor": True}
+            },
+            {
+                "id": 8,
+                "title": "💰 Scenario 8: The Hidden Shipping Fee Shock",
+                "subtitle": "Surprise Shipping Cost Hesitation",
+                "story": "Fills cart with ₹500 budget items. At final screen, a ₹100 shipping fee is added unexpectedly. Feeling shipping is too high, they drop off.",
+                "triggers": ["current_cart_value = ₹500", "shipping_cost_viewed = 1", "shipping_info_submitted = 1", "payment_attempts = 0"],
+                "risk_expected": "0.84 (High Risk)",
+                "cause_expected": "SHIPPING_FEE_SHOCK",
+                "action_expected": "LIMITED_OFFER (Free Shipping Waiver)",
+                "why_impresses": "Highlights precision matching—treating shipping hesitation with free-shipping incentives rather than blanket product discounts.",
+                "session_data": {"session_id": "SCEN_8", "cart_value": 500, "session_duration": 210, "product_views": 3, "cart_adds": 1, "checkout_steps_completed": 3, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 9,
+                "title": "🔍 Scenario 9: The Infinite Tab Researcher",
+                "subtitle": "Paralysis by Analysis / Comparison",
+                "story": "Opens 18 product pages across 3 categories, comparing specs for 40 mins. Leaves items in cart without advancing to checkout.",
+                "triggers": ["unique_products_viewed = 18", "unique_categories_viewed = 3", "total_session_duration = 2400s", "checkout_reached = 0"],
+                "risk_expected": "0.65 (Medium Risk)",
+                "cause_expected": "COMPARISON_SHOPPING",
+                "action_expected": "DO_NOTHING / SOCIAL_PROOF_NUDGE",
+                "why_impresses": "Demonstrates that high duration doesn't always mean high intent; sometimes users just need time without being badgered by popup coupons.",
+                "session_data": {"session_id": "SCEN_9", "cart_value": 3200, "session_duration": 2400, "product_views": 18, "cart_adds": 2, "checkout_steps_completed": 0, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 10,
+                "title": "🌙 Scenario 10: Late-Night Impulsive Window Shopping",
+                "subtitle": "Temporal Intelligence (2:30 AM Impulse)",
+                "story": "At 2:30 AM, user browses expensive electronics, adds a ₹60,000 laptop to cart, leaves before checkout—typical late-night impulse browsing.",
+                "triggers": ["hour_of_day = 2 (2 AM)", "is_peak_shopping_hour = 0", "current_cart_value = ₹60,000", "checkout_reached = 0"],
+                "risk_expected": "0.72 (Medium Risk)",
+                "cause_expected": "LATE_NIGHT_IMPULSE",
+                "action_expected": "DO_NOTHING (Soft Reminder Next Afternoon)",
+                "why_impresses": "Incorporates temporal intelligence (hour_of_day), showing the system knows when to trigger interventions.",
+                "session_data": {"session_id": "SCEN_10", "cart_value": 60000, "session_duration": 180, "product_views": 4, "cart_adds": 1, "checkout_steps_completed": 0, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 11,
+                "title": "🎫 Scenario 11: The Promo-Code Hunting Loop",
+                "subtitle": "Promo Code Friction / Coupon Hunting",
+                "story": "Loads cart, types random coupon codes 3 times (fails/expired). Frustrated, exits site right at checkout.",
+                "triggers": ["coupon_code_entered_count = 3", "total_session_duration = 240s", "checkout_reached = 1"],
+                "risk_expected": "0.88 (High Risk)",
+                "cause_expected": "PROMO_CODE_FRICTION",
+                "action_expected": "LIMITED_OFFER (Baseline Welcome Code)",
+                "why_impresses": "Identifies coupon-hunting behavior directly from feature interactions to close high-intent deal.",
+                "session_data": {"session_id": "SCEN_11", "cart_value": 2800, "session_duration": 240, "product_views": 3, "cart_adds": 2, "checkout_steps_completed": 3, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 12,
+                "title": "🔄 Scenario 12: The Multi-Device Switcher",
+                "subtitle": "Cross-Device Transition Drop-off",
+                "story": "Starts browsing desktop at office during lunch, adds items, leaves. Later logs in from mobile phone app, views cart.",
+                "triggers": ["traffic_source_ads = 1", "is_returning_customer = 1", "device_type_mobile = 1"],
+                "risk_expected": "0.58 (Medium Risk)",
+                "cause_expected": "CROSS_DEVICE_TRANSITION",
+                "action_expected": "CART_REMINDER (Omnichannel Cart Sync)",
+                "why_impresses": "Shows deep contextual awareness of modern omnichannel user journeys.",
+                "session_data": {"session_id": "SCEN_12", "cart_value": 1900, "session_duration": 150, "product_views": 2, "cart_adds": 1, "checkout_steps_completed": 1, "payment_attempts": 0, "is_returning_visitor": True}
+            },
+            {
+                "id": 13,
+                "title": "🚫 Scenario 13: The Low-Value Micro-Cart Drop-off",
+                "subtitle": "Unfavorable Micro-Cart Economics",
+                "story": "Adds single item worth ₹99, sees ₹50 shipping (over half product value), bounces immediately.",
+                "triggers": ["current_cart_value = ₹99", "net_cart_quantity = 1", "shipping_cost_viewed = 1"],
+                "risk_expected": "0.45 (Low Risk)",
+                "cause_expected": "MICRO_CART_UNFAVORABLE",
+                "action_expected": "DO_NOTHING",
+                "why_impresses": "Highlights extreme margin-protection intelligence, proving system refuses to execute unprofitable interventions on micro-orders.",
+                "session_data": {"session_id": "SCEN_13", "cart_value": 99, "session_duration": 60, "product_views": 1, "cart_adds": 1, "checkout_steps_completed": 2, "payment_attempts": 0, "is_returning_visitor": False}
+            },
+            {
+                "id": 14,
+                "title": "⚡ Scenario 14: The Net Banking Gateway Timeout",
+                "subtitle": "Fintech Gateway Lag / Timeout",
+                "story": "Net Banking OTP takes 3 minutes to arrive, session times out and throws bank gateway error. User gives up.",
+                "triggers": ["netbanking_selected = 1", "payment_attempts = 1", "payment_failures = 1", "checkout_page_duration = 180s"],
+                "risk_expected": "0.94 (Very High Risk)",
+                "cause_expected": "GATEWAY_TIMEOUT",
+                "action_expected": "ALTERNATE_PAYMENT_GUIDANCE (Instant UPI/Card)",
+                "why_impresses": "Targets real-world Indian fintech failure vectors (gateway lags).",
+                "session_data": {"session_id": "SCEN_14", "cart_value": 4200, "session_duration": 300, "product_views": 4, "cart_adds": 2, "checkout_steps_completed": 4, "payment_attempts": 1, "payment_failures": 1, "time_on_payment_page": 180, "is_returning_visitor": True}
+            },
+            {
+                "id": 15,
+                "title": "🎯 Scenario 15: The High-Loyalty Safe User",
+                "subtitle": "Autonomous Recovery (VIP Customer)",
+                "story": "VIP customer with 20 past successful purchases & 0% abandonment closes app after phone call distraction.",
+                "triggers": ["is_returning_customer = 1", "historical_purchase_count = 20", "historical_abandonment_rate = 0.02"],
+                "risk_expected": "0.30 (Low Risk)",
+                "cause_expected": "LOYAL_CUSTOMER_DISTRACTION",
+                "action_expected": "DO_NOTHING",
+                "why_impresses": "Proves system doesn't waste promotional capital on loyal users who convert organically anyway, maximizing baseline profit.",
+                "session_data": {"session_id": "SCEN_15", "cart_value": 3500, "session_duration": 120, "product_views": 2, "cart_adds": 1, "checkout_steps_completed": 1, "payment_attempts": 0, "is_returning_visitor": True}
+            }
+        ]
+
+        for item in scenarios_data_15:
+            with st.expander(f"**{item['title']}** — *{item['subtitle']}*"):
+                st.markdown(f"📖 **Story**: {item['story']}")
+                
+                # Triggers tags
+                st.markdown("**Key Feature Triggers:** " + " ".join([f"`{t}`" for t in item["triggers"]]))
+                
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.markdown(f"🎯 **Expected Risk**: `{item['risk_expected']}`")
+                with c2:
+                    st.markdown(f"🔍 **Detected Reason**: `{item['cause_expected']}`")
+                with c3:
+                    st.markdown(f"⚡ **Prescribed Action**: `{item['action_expected']}`")
+
+                st.info(f"💡 **Why it Impresses Evaluators**: {item['why_impresses']}")
+
+                # Live simulation button
+                if st.button(f"▶ Run Live Simulation", key=f"run_15_{item['id']}"):
+                    with st.spinner("Processing multi-agent pipeline..."):
+                        result = api_call("/api/v1/score", method="POST", data=item["session_data"])
+                    if result:
+                        st.session_state[f"res_15_{item['id']}"] = result
+
+                res = st.session_state.get(f"res_15_{item['id']}")
+                if res:
+                    risk = res.get("risk_score", 0)
+                    diag = res.get("diagnosis", {}).get("root_cause", "?")
+                    act  = res.get("action", {}).get("action_type", "?")
+                    lat  = res.get("api_latency_ms", 0)
+
+                    st.success(f"✅ **Risk Score**: {risk:.0%} &nbsp;|&nbsp; **Diagnosis**: `{diag}` &nbsp;|&nbsp; **Action**: `{act}` &nbsp;|&nbsp; ⚡ **Latency**: {lat:.1f}ms")
+
+                    if st.checkbox("🔍 Show Full Decision JSON", key=f"json_15_{item['id']}"):
+                        st.json(res)
 
 
 # ── Score Session Page ─────────────────────────────────────────────────────────
