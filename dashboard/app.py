@@ -714,19 +714,163 @@ elif "⚡ Batch Scoring" in page:
             ]
             st.caption("Using offline fallback session payloads.")
     else:
-        batch_size = st.slider("Batch Size", 2, 20, 5)
+        batch_size = st.slider("Batch Size", 2, 26, 6)
+
+        # ── Persona archetypes: realistic signals that trigger varied ML decisions ──
+        ARCHETYPES = [
+            {
+                "label": "💳 Payment Failure",
+                "base": {
+                    "cart_value": 3800, "session_duration": 220,
+                    "product_views": 4, "cart_adds": 2, "cart_removes": 0,
+                    "checkout_steps_completed": 4, "checkout_time": 180,
+                    "payment_attempts": 3, "payment_failures": 2,
+                    "time_on_payment_page": 240, "form_field_errors": 2,
+                    "back_navigations": 3, "tab_switches": 1,
+                    "category_switches": 0, "cart_changes": 2,
+                    "is_returning_visitor": True, "user_segment": "REGULAR",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "🔍 Comparison Shopper",
+                "base": {
+                    "cart_value": 1500, "session_duration": 540,
+                    "product_views": 18, "cart_adds": 4, "cart_removes": 3,
+                    "checkout_steps_completed": 1, "checkout_time": 20,
+                    "payment_attempts": 0, "payment_failures": 0,
+                    "time_on_payment_page": 0, "form_field_errors": 0,
+                    "back_navigations": 6, "tab_switches": 12,
+                    "category_switches": 5, "cart_changes": 7,
+                    "is_returning_visitor": False, "user_segment": "BARGAIN",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": False,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "😤 Checkout Friction",
+                "base": {
+                    "cart_value": 2200, "session_duration": 420,
+                    "product_views": 6, "cart_adds": 3, "cart_removes": 1,
+                    "checkout_steps_completed": 3, "checkout_time": 300,
+                    "payment_attempts": 1, "payment_failures": 0,
+                    "time_on_payment_page": 0, "form_field_errors": 7,
+                    "back_navigations": 5, "tab_switches": 2,
+                    "category_switches": 1, "cart_changes": 4,
+                    "is_returning_visitor": True, "user_segment": "REGULAR",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "💰 Price Sensitive Bargain Hunter",
+                "base": {
+                    "cart_value": 950, "session_duration": 680,
+                    "product_views": 22, "cart_adds": 6, "cart_removes": 5,
+                    "checkout_steps_completed": 2, "checkout_time": 45,
+                    "payment_attempts": 0, "payment_failures": 0,
+                    "time_on_payment_page": 0, "form_field_errors": 0,
+                    "back_navigations": 4, "tab_switches": 9,
+                    "category_switches": 4, "cart_changes": 11,
+                    "is_returning_visitor": True, "user_segment": "BARGAIN",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 80,
+                },
+            },
+            {
+                "label": "🛍️ High-Intent Premium",
+                "base": {
+                    "cart_value": 8500, "session_duration": 180,
+                    "product_views": 3, "cart_adds": 1, "cart_removes": 0,
+                    "checkout_steps_completed": 5, "checkout_time": 90,
+                    "payment_attempts": 1, "payment_failures": 0,
+                    "time_on_payment_page": 30, "form_field_errors": 0,
+                    "back_navigations": 0, "tab_switches": 0,
+                    "category_switches": 0, "cart_changes": 1,
+                    "is_returning_visitor": True, "user_segment": "PREMIUM",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "👀 Casual Browser",
+                "base": {
+                    "cart_value": 400, "session_duration": 90,
+                    "product_views": 8, "cart_adds": 1, "cart_removes": 1,
+                    "checkout_steps_completed": 0, "checkout_time": 0,
+                    "payment_attempts": 0, "payment_failures": 0,
+                    "time_on_payment_page": 0, "form_field_errors": 0,
+                    "back_navigations": 1, "tab_switches": 3,
+                    "category_switches": 2, "cart_changes": 2,
+                    "is_returning_visitor": False, "user_segment": "NEW",
+                    "is_dnd_registered": False, "email_opt_in": False, "sms_opt_in": False,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "⏱️ Abandoned Checkout",
+                "base": {
+                    "cart_value": 2900, "session_duration": 310,
+                    "product_views": 5, "cart_adds": 2, "cart_removes": 0,
+                    "checkout_steps_completed": 4, "checkout_time": 250,
+                    "payment_attempts": 2, "payment_failures": 1,
+                    "time_on_payment_page": 180, "form_field_errors": 3,
+                    "back_navigations": 4, "tab_switches": 5,
+                    "category_switches": 0, "cart_changes": 2,
+                    "is_returning_visitor": True, "user_segment": "REGULAR",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+            {
+                "label": "🧠 Social Proof Candidate",
+                "base": {
+                    "cart_value": 1800, "session_duration": 480,
+                    "product_views": 15, "cart_adds": 3, "cart_removes": 2,
+                    "checkout_steps_completed": 2, "checkout_time": 60,
+                    "payment_attempts": 0, "payment_failures": 0,
+                    "time_on_payment_page": 0, "form_field_errors": 0,
+                    "back_navigations": 3, "tab_switches": 8,
+                    "category_switches": 3, "cart_changes": 5,
+                    "is_returning_visitor": False, "user_segment": "NEW",
+                    "is_dnd_registered": False, "email_opt_in": True, "sms_opt_in": True,
+                    "user_discount_spend_this_month": 0,
+                },
+            },
+        ]
+
+        def _jitter(val, pct=0.20):
+            """Add ±pct random noise to a numeric value, floor 0."""
+            if not isinstance(val, (int, float)):
+                return val
+            noise = 1.0 + np.random.uniform(-pct, pct)
+            result = val * noise
+            return max(0, int(result)) if isinstance(val, int) else max(0.0, round(result, 2))
+
         sessions_list = []
+        archetype_picks = []
         for i in range(batch_size):
-            sessions_list.append({
-                "session_id": f"RAND_BATCH_{i+1:03d}",
-                "cart_value": float(np.random.randint(500, 5000)),
-                "session_duration": float(np.random.randint(60, 600)),
-                "product_views": int(np.random.randint(1, 15)),
-                "cart_adds": int(np.random.randint(1, 5)),
-                "payment_attempts": int(np.random.randint(0, 3)),
-                "payment_failures": int(np.random.randint(0, 2)),
-            })
-        st.write(f"Generated {len(sessions_list)} dynamic random session payloads.")
+            arch = ARCHETYPES[i % len(ARCHETYPES)]
+            sess = {k: _jitter(v) for k, v in arch["base"].items()}
+            sess["session_id"] = f"RAND_{arch['label'].split()[-1].upper()}_{i+1:03d}"
+            sessions_list.append(sess)
+            archetype_picks.append(arch["label"])
+
+        preview_df = pd.DataFrame([
+            {
+                "Session ID": s["session_id"],
+                "Persona Archetype": archetype_picks[i],
+                "Cart ₹": f"₹{s['cart_value']:,.0f}",
+                "Pay Failures": s["payment_failures"],
+                "Tab Switches": s["tab_switches"],
+                "Form Errors": s["form_field_errors"],
+                "Checkout Steps": s["checkout_steps_completed"],
+            }
+            for i, s in enumerate(sessions_list)
+        ])
+        st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        st.caption(f"Generated **{len(sessions_list)}** sessions across {min(batch_size, len(ARCHETYPES))} persona archetypes with ±20% random noise.")
 
     with st.expander("🔍 Inspect Batch Request Payload"):
         st.json({"sessions": sessions_list})
