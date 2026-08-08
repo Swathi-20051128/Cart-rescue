@@ -1317,7 +1317,7 @@ elif "📊 Uplift Analysis" in page:
                 else:
                     # 2. Self-contained calculation fallback directly in dashboard
                     np.random.seed(42)
-                    action_rates = {"ALTERNATE_PAYMENT_GUIDANCE": 0.42, "SOCIAL_PROOF_NUDGE": 0.18, "CHECKOUT_ASSISTANCE": 0.32, "LIMITED_OFFER": 0.28, "DO_NOTHING": 0.08}
+                    action_rates = {"ALTERNATE_PAYMENT_GUIDANCE": 0.42, "CHECKOUT_ASSISTANCE": 0.32, "LIMITED_OFFER": 0.28, "SOCIAL_PROOF_NUDGE": 0.18, "DO_NOTHING": 0.08}
                     sessions = []
                     for i in range(n_sessions):
                         in_trt = np.random.random() > 0.5
@@ -1328,7 +1328,7 @@ elif "📊 Uplift Analysis" in page:
                         eff = action_rates.get(act, 0) * risk
                         conv = bool(np.random.random() < min(base + eff, 1.0))
                         disc = float(min(cart * 0.08, 200) if (act == "LIMITED_OFFER" and conv) else 0)
-                        sessions.append({"in_trt": in_trt, "conv": conv, "disc": disc, "rev": cart * 0.25 if conv else 0})
+                        sessions.append({"action": act, "in_trt": in_trt, "conv": conv, "disc": disc, "rev": cart * 0.25 if conv else 0})
                     
                     df_sim = pd.DataFrame(sessions)
                     ctrl = df_sim[~df_sim["in_trt"]]
@@ -1346,11 +1346,24 @@ elif "📊 Uplift Analysis" in page:
                     smart = float(trt["disc"].mean())
                     savings = max(blanket - smart, 45.0)
 
+                    # Compute action performance table
+                    act_perf = {}
+                    for act_name in action_rates.keys():
+                        sub = df_sim[df_sim["action"] == act_name]
+                        if len(sub) > 0:
+                            act_perf[act_name] = {
+                                "count": len(sub),
+                                "cvr": round(float(sub["conv"].mean() * 100), 2),
+                                "avg_margin_inr": round(float(sub["rev"].mean()), 2),
+                                "avg_discount_inr": round(float(sub["disc"].mean()), 2),
+                            }
+
                     st.session_state["uplift_result"] = {
                         "simulation_config": {"n_sessions": n_sessions, "treatment_size": len(trt), "control_size": len(ctrl)},
                         "conversion_rates": {"control_cvr": round(c_cvr * 100, 2), "treatment_cvr": round(t_cvr * 100, 2), "absolute_uplift_pp": round(uplift * 100, 2), "relative_uplift_pct": round(uplift / max(c_cvr, 0.001) * 100, 1)},
                         "statistical_significance": {"p_value": p_val, "is_significant": p_val < 0.05, "confidence_level": "95%", "ci_lower_pp": round(ci_l * 100, 2), "ci_upper_pp": round(ci_h * 100, 2)},
-                        "financial_impact": {"incremental_margin_per_session_inr": round(inc_margin, 2), "smart_discount_cost_inr": round(smart, 2), "blanket_discount_cost_inr": round(blanket, 2), "discount_savings_per_session_inr": round(savings, 2), "discount_reduction_pct": round(savings / max(blanket, 0.01) * 100, 1)}
+                        "financial_impact": {"incremental_margin_per_session_inr": round(inc_margin, 2), "smart_discount_cost_inr": round(smart, 2), "blanket_discount_cost_inr": round(blanket, 2), "discount_savings_per_session_inr": round(savings, 2), "discount_reduction_pct": round(savings / max(blanket, 0.01) * 100, 1)},
+                        "action_performance": act_perf
                     }
     
     if "uplift_result" in st.session_state:
@@ -1384,16 +1397,33 @@ elif "📊 Uplift Analysis" in page:
         uplift_val = cvr.get("absolute_uplift_pp", 0)
         
         fig = go.Figure()
-        fig.add_shape(type="rect", x0=ci_low, x1=ci_high, y0=0.3, y1=0.7,
-                      fillcolor="rgba(102,126,234,0.3)", line_color="rgba(102,126,234,0.8)")
-        fig.add_vline(x=uplift_val, line_color="#764ba2", line_width=3)
-        fig.add_vline(x=0, line_color="#94a3b8", line_dash="dash")
+        # Add background range band
+        fig.add_trace(go.Bar(
+            x=[max(ci_high - ci_low, 1.0)],
+            y=["Uplift (95% CI)"],
+            base=[ci_low],
+            orientation='h',
+            marker_color='rgba(11, 46, 89, 0.25)',
+            hoverinfo='none',
+            showlegend=False
+        ))
+        # Add actual point marker
+        fig.add_trace(go.Scatter(
+            x=[uplift_val],
+            y=["Uplift (95% CI)"],
+            mode='markers+text',
+            marker=dict(size=16, color='#0b2e59'),
+            text=[f"{uplift_val:.2f}pp"],
+            textposition="top center",
+            showlegend=False
+        ))
         fig.update_layout(
-            title=f"95% CI for Uplift: [{ci_low:.1f}pp, {ci_high:.1f}pp]",
+            title=f"95% Confidence Interval: [{ci_low:.2f}pp to {ci_high:.2f}pp]",
             xaxis_title="Conversion Rate Uplift (percentage points)",
             paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(248,250,252,1)",
             font_color="#0b2e59",
-            height=200,
+            height=220,
         )
         st.plotly_chart(fig, use_container_width=True)
         
@@ -1401,12 +1431,29 @@ elif "📊 Uplift Analysis" in page:
         st.subheader("🎯 Action Performance")
         action_perf = result.get("action_performance", {})
         if action_perf:
-            perf_df = pd.DataFrame([
-                {"Action": k, "Count": v["count"], "CVR%": v["cvr"],
-                 "Avg Margin ₹": v["avg_margin_inr"], "Avg Discount ₹": v["avg_discount_inr"]}
+            perf_rows = [
+                {"Action": k, "Session Count": v["count"], "CVR (%)": v["cvr"],
+                 "Avg Margin (₹)": v["avg_margin_inr"], "Avg Discount (₹)": v["avg_discount_inr"]}
                 for k, v in action_perf.items()
-            ])
-            st.dataframe(perf_df, use_container_width=True)
+            ]
+            perf_df = pd.DataFrame(perf_rows)
+            
+            pcol1, pcol2 = st.columns([2, 1])
+            with pcol1:
+                fig_act = px.bar(
+                    perf_df,
+                    x="Action",
+                    y="CVR (%)",
+                    color="Action",
+                    title="Conversion Rate by Prescribed Action",
+                    color_discrete_sequence=px.colors.qualitative.Bold,
+                    text="CVR (%)"
+                )
+                fig_act.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="#0b2e59")
+                st.plotly_chart(fig_act, use_container_width=True)
+            with pcol2:
+                st.markdown("**Action Breakdown Table**")
+                st.dataframe(perf_df, use_container_width=True, hide_index=True)
 
 
 # ── Audit Log Page ─────────────────────────────────────────────────────────────
