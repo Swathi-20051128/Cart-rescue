@@ -360,10 +360,8 @@ async def score_session_v1(session: SessionData, background_tasks: BackgroundTas
             or session_dict.get("user_whatsapp")
         )
         if action.get("action_type") not in ["DO_NOTHING", None] and has_contact:
-            background_tasks.add_task(
-                notification_service.send_notification,
-                session_dict, action
-            )
+            notif_res = await notification_service.send_notification(session_dict, action)
+            result["notification_result"] = notif_res
         
         latency = (time.time() - start) * 1000
         result["api_latency_ms"] = round(latency, 2)

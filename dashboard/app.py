@@ -550,6 +550,20 @@ elif "🔬 Score Session" in page:
                 with nc1: st.markdown(email_html, unsafe_allow_html=True)
                 with nc2: st.markdown(sms_html,   unsafe_allow_html=True)
                 with nc3: st.markdown(wa_html,    unsafe_allow_html=True)
+
+                # Live dispatch status banner
+                notif_res = result.get("notification_result", {})
+                if notif_res:
+                    n_status = notif_res.get("status")
+                    n_chan   = notif_res.get("channel", "").upper()
+                    if n_status == "sent":
+                        n_sid = notif_res.get("sid", "OK")
+                        st.success(f"🟢 **Live {n_chan} Delivered!** (Twilio SID: `{n_sid}`)")
+                    elif n_status == "error":
+                        n_err = notif_res.get("error", "Unknown error")
+                        st.warning(f"⚠️ **Live {n_chan} Dispatch Status**: {n_err}")
+                    elif n_status == "mock_sent":
+                        st.info(f"ℹ️ **{n_chan} Mock Dispatch**: Add live keys to `.env` to enable real phone delivery.")
             
             # Self-check
             self_check = result.get("self_check", {})
