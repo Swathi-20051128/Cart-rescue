@@ -392,6 +392,7 @@
             color: var(--accent-amber);
         }
         .mode-chip.live { background: var(--accent-emerald-bg); color: var(--accent-emerald); }
+        .mode-chip.offline { background: var(--accent-rose-bg, rgba(244,63,94,0.12)); color: var(--accent-rose, #f43f5e); }
 
         /* ── Divider label ────────────────────────────── */
         .section-divider {
@@ -961,6 +962,21 @@ async function checkConnection() {
     }
 }
 
+/* ── Surface data source state (never silently mask a live-API failure) ── */
+function showSourceState(source) {
+    const chip = document.getElementById('modeChip');
+    if (source === 'live') {
+        chip.className = 'mode-chip live';
+        chip.textContent = '🟢 Live API';
+    } else if (source === 'mock-fallback') {
+        chip.className = 'mode-chip offline';
+        chip.textContent = '⚠ Live API failed — showing demo data';
+    } else {
+        chip.className = 'mode-chip';
+        chip.textContent = '⚡ Mock Mode';
+    }
+}
+
 /* ── Load scenario payload preview ── */
 function loadScenario() {
     const sel = document.getElementById('scenarioSelect').value;
@@ -1015,8 +1031,12 @@ function renderResult(result, source) {
     document.getElementById('recChannel').textContent =
         `Channel: ${action.channel || 'N/A'}`;
 
-    // Margin
-    const cartVal = MOCK[document.getElementById('scenarioSelect').value]?.payload?.cart_value || 0;
+    // Margin — use the live-computed cart value when the result came from
+    // the real API; only fall back to the static MOCK payload for mock
+    // results (previously this always read MOCK regardless of source).
+    const cartVal = (result.cart_value !== undefined && result.cart_value !== null)
+        ? result.cart_value
+        : (MOCK[document.getElementById('scenarioSelect').value]?.payload?.cart_value || 0);
     const disc = action.discount_amount || 0;
     document.getElementById('expMargin').textContent = `₹${(cartVal - disc).toLocaleString('en-IN')}`;
     document.getElementById('discountApplied').textContent =
@@ -1084,20 +1104,21 @@ async function runDiagnosis() {
             const r = await fetch(`${API_BASE}/api/v1/demo/run/${sel}`, { method: 'POST' });
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             const data = await r.json();
-            result = data.result;
+            result = { ...data.result, cart_value: data.cart_value };
             source = 'live';
         } catch (e) {
             console.warn('Live API failed, using mock:', e.message);
-            result = MOCK[sel].res;
-            source = 'mock';
+            result = { ...MOCK[sel].res, cart_value: MOCK[sel].payload.cart_value };
+            source = 'mock-fallback';
         }
     } else {
         // Simulate processing delay for offline demo
         await new Promise(res => setTimeout(res, 320 + Math.random() * 200));
-        result = MOCK[sel].res;
+        result = { ...MOCK[sel].res, cart_value: MOCK[sel].payload.cart_value };
         source = 'mock';
     }
 
+    showSourceState(source);
     renderResult(result, source);
 
     btn.classList.remove('loading');
@@ -1140,20 +1161,23 @@ async function runAllScenarios() {
         const sc = ALL_SCENARIOS[i];
         document.getElementById(`bicon_${sc.key}`).textContent = '⚙️';
 
-        let result, latency;
+        let result, latency, rowSource;
         const t0 = Date.now();
         if (isLive) {
             try {
                 const r = await fetch(`${API_BASE}/api/v1/demo/run/${sc.key}`, { method: 'POST' });
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 const d = await r.json();
-                result = d.result;
+                result = { ...d.result, cart_value: d.cart_value };
+                rowSource = 'live';
             } catch {
-                result = MOCK[sc.key].res;
+                result = { ...MOCK[sc.key].res, cart_value: MOCK[sc.key].payload.cart_value };
+                rowSource = 'mock-fallback';
             }
         } else {
             await new Promise(r => setTimeout(r, 280 + Math.random() * 180));
-            result = MOCK[sc.key].res;
+            result = { ...MOCK[sc.key].res, cart_value: MOCK[sc.key].payload.cart_value };
+            rowSource = 'mock';
         }
         latency = Date.now() - t0;
         totalLatency += latency;
@@ -1181,7 +1205,8 @@ async function runAllScenarios() {
         // Update main panel with last scenario
         if (i === ALL_SCENARIOS.length - 1) {
             document.getElementById('scenarioSelect').value = sc.key;
-            renderResult(result, isLive ? 'live' : 'mock');
+            showSourceState(rowSource);
+            renderResult(result, rowSource);
         }
     }
 
