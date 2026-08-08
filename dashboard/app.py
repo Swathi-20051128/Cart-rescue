@@ -132,6 +132,26 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
+    /* All Labels, Widget Text, Sliders, Paragraphs, Subheaders & Markdowns */
+    label, p, span, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, 
+    [data-testid="stMarkdownContainer"] p, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, 
+    .stMarkdown h3, .stMarkdown h4, div[data-baseweb="slider"] div, [data-testid="stSlider"] label,
+    div[data-testid="stCaptionContainer"] p, .stCaption {
+        color: #0b2e59 !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }
+
+    /* Slider track & thumb styling for clean visibility */
+    div[data-baseweb="slider"] div[role="slider"] {
+        background-color: #0b2e59 !important;
+        border-color: #0b2e59 !important;
+    }
+    div[data-baseweb="slider"] div {
+        color: #0b2e59 !important;
+        font-weight: 700 !important;
+    }
+
     /* Plotly SVG text override for high contrast */
     .js-plotly-plot .plotly text, .js-plotly-plot .plotly .gtitle, .js-plotly-plot .plotly .xtitle, .js-plotly-plot .plotly .ytitle {
         fill: #0b2e59 !important;
