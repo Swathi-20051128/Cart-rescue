@@ -143,6 +143,14 @@ st.markdown("""
         opacity: 1 !important;
     }
 
+    /* Primary & Action Button Text Override — force crisp white text */
+    .stButton > button *, div[data-testid="stFormSubmitButton"] > button *, 
+    .stButton button span, .stButton button p, button[kind="primary"] * {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        opacity: 1 !important;
+    }
+
     /* Alert Boxes (st.success, st.warning, st.info, st.error) */
     [data-testid="stAlert"] {
         border-radius: 10px !important;
