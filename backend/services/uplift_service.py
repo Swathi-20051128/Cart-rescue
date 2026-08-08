@@ -2,9 +2,22 @@
 CartGuard AI - Uplift & Validation Service
 Synthetic uplift modeling to prove margin impact without real A/B test data.
 """
-import numpy as np
-import pandas as pd
-from scipy import stats
+try:
+    from scipy import stats
+except ImportError:
+    class StatsFallback:
+        @staticmethod
+        def ttest_ind(a, b):
+            mean_a, mean_b = np.mean(a), np.mean(b)
+            var_a, var_b = np.var(a, ddof=1), np.var(b, ddof=1)
+            n_a, n_b = max(len(a), 1), max(len(b), 1)
+            se = np.sqrt(var_a / n_a + var_b / n_b)
+            if se == 0:
+                return 0.0, 1.0
+            t_stat = (mean_a - mean_b) / se
+            p_val = max(0.0001, round(float(2 * (1 - 0.5 * (1 + np.tanh(0.798 * abs(t_stat))))), 4))
+            return t_stat, p_val
+    stats = StatsFallback()
 from typing import Dict, Any, List, Tuple
 import json
 
