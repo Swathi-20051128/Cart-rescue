@@ -26,109 +26,141 @@ API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000")
 # ── Custom CSS (aligned to test.html light-mode design) ─────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    /* Base */
-    html, body, [class*="css"] { font-family: 'Plus Jakarta Sans', sans-serif !important; }
-    .main .block-container { background: #f8f9fa; padding-top: 1.5rem; }
+    /* Global Light Theme Override */
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+    
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
+        background-color: #f8fafc !important;
+        color: #0b2e59 !important;
+    }
+    
+    .main .block-container {
+        background: #f8fafc !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 3rem !important;
+    }
 
-    /* Stat card metrics — monospace values */
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #0b2e59 !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.3px !important;
+    }
+
+    /* Stat card metrics */
     [data-testid="stMetricValue"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-weight: 700 !important;
-        color: #0f172a !important;
+        font-weight: 800 !important;
+        color: #0b2e59 !important;
     }
     [data-testid="stMetricLabel"] {
-        font-size: 0.78rem !important;
-        font-weight: 600 !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.4px !important;
+        letter-spacing: 0.5px !important;
         color: #475569 !important;
     }
     [data-testid="stMetricDelta"] { font-size: 0.78rem !important; }
 
-    /* Metric containers — white card style */
+    /* Metric containers — modern card design */
     [data-testid="metric-container"] {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 14px 18px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        padding: 16px 20px !important;
+        box-shadow: 0 4px 12px rgba(11, 46, 89, 0.05) !important;
     }
 
-    /* Risk badges */
-    .risk-high   { color: #dc2626; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-    .risk-medium { color: #d97706; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-    .risk-low    { color: #059669; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-
-    /* Action badges */
-    .action-badge {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 5px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
+    /* Expanders & Cards */
+    [data-testid="stExpander"] {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(11, 46, 89, 0.04) !important;
+        margin-bottom: 12px !important;
     }
-    .badge-rose    { background: #fef2f2; color: #dc2626; }
-    .badge-amber   { background: #fffbeb; color: #d97706; }
-    .badge-emerald { background: #ecfdf5; color: #059669; }
-    .badge-blue    { background: #f0f9ff; color: #0284c7; }
-    .badge-violet  { background: #f5f3ff; color: #7c3aed; }
+    [data-testid="stExpander"] summary span {
+        color: #0b2e59 !important;
+        font-weight: 700 !important;
+    }
 
-    /* Primary button */
-    .stButton > button {
-        background: #1e293b !important;
+    /* Form Container */
+    [data-testid="stForm"] {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 14px !important;
+        padding: 24px !important;
+        box-shadow: 0 4px 16px rgba(11, 46, 89, 0.06) !important;
+    }
+
+    /* Inputs, Selectboxes & Text Area */
+    div[data-baseweb="input"] input, div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        color: #0b2e59 !important;
+        border-radius: 8px !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    div[data-baseweb="input"] input:focus {
+        border-color: #0b2e59 !important;
+        box-shadow: 0 0 0 2px rgba(11, 46, 89, 0.15) !important;
+    }
+
+    /* Primary & Action Buttons */
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(135deg, #0b2e59 0%, #1e3a5a 100%) !important;
         color: #ffffff !important;
         border: none !important;
         border-radius: 10px !important;
         padding: 10px 24px !important;
         font-weight: 700 !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        transition: opacity 0.2s ease !important;
+        box-shadow: 0 4px 12px rgba(11, 46, 89, 0.18) !important;
+        transition: all 0.2s ease !important;
     }
-    .stButton > button:hover { opacity: 0.88 !important; }
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 18px rgba(11, 46, 89, 0.28) !important;
+    }
+
+    /* Radio buttons & Checkboxes */
+    div[role="radiogroup"] label, [data-testid="stCheckbox"] label {
+        color: #0b2e59 !important;
+        font-weight: 600 !important;
+    }
 
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background: #ffffff !important;
-        border-right: 1px solid #e2e8f0 !important;
+        background-color: #ffffff !important;
+        border-right: 1px solid #cbd5e1 !important;
     }
-    [data-testid="stSidebar"] * { color: #0f172a !important; }
+    [data-testid="stSidebar"] * { color: #0b2e59 !important; }
 
     .sidebar-header {
-        background: #1e293b;
-        padding: 14px 16px;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #0b2e59 0%, #1e3a5a 100%);
+        padding: 16px 18px;
+        border-radius: 12px;
         text-align: center;
-        color: white !important;
-        font-weight: 700;
-        font-size: 1rem;
+        color: #ffffff !important;
+        font-weight: 800;
+        font-size: 1.1rem;
         margin-bottom: 18px;
-        letter-spacing: 0.2px;
-    }
-
-    /* Evidence items */
-    .evidence-item {
-        font-size: 0.85rem;
-        color: #475569;
-        padding: 9px 13px;
-        background: #f8fafc;
-        border-left: 3px solid #1e293b;
-        border-radius: 0 6px 6px 0;
-        margin-bottom: 8px;
-        line-height: 1.45;
+        letter-spacing: 0.3px;
+        box-shadow: 0 4px 14px rgba(11, 46, 89, 0.2);
     }
 
     /* Dividers */
-    hr { border-color: #e2e8f0 !important; }
+    hr { border-color: #cbd5e1 !important; }
 
-    /* Audit table */
+    /* Audit & Data Tables */
     [data-testid="stDataFrame"] {
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        overflow: hidden;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
