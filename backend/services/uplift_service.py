@@ -2,6 +2,9 @@
 CartGuard AI - Uplift & Validation Service
 Synthetic uplift modeling to prove margin impact without real A/B test data.
 """
+import numpy as np
+import pandas as pd
+
 try:
     from scipy import stats
 except ImportError:
