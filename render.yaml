@@ -5,9 +5,11 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
-    startCommand: cd backend && python -c "from models.ensemble_model import train_and_save_model; train_and_save_model(2000)" && uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: LLM_PROVIDER
         value: groq
       - key: GROQ_API_KEY
@@ -27,9 +29,11 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: streamlit run dashboard/app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
       - key: API_BASE_URL
         fromService:
           type: web
