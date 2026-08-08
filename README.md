@@ -25,9 +25,8 @@ CartGuard AI is fully deployed across free, high-performance cloud providers:
 
 | Component | Cloud Host | Live Link | Status |
 | :--- | :---: | :--- | :---: |
-| ⚡ **Backend API Server** | **Render** | [https://cartguard-backend.onrender.com](https://cartguard-backend.onrender.com) | `🟢 Live` |
-| 🛒 **Streamlit Dashboard** | **Render** | [https://cartguard-dashboard.onrender.com](https://cartguard-dashboard.onrender.com) | `🟢 Live` |
-| 💻 **Frontend Web App** | **Vercel** | [https://cart-rescue.vercel.app](https://cart-rescue.vercel.app) | `🟢 Live` |
+| ⚡ **Backend API Server** | **Render** | [https://cart-rescue.onrender.com](https://cartguard-backend.onrender.com) | `🟢 Live` |
+| 🛒 **Streamlit Dashboard** |streamlit | [https://cart-rescue-afm7b.streamlit.app/] | `🟢 Live` |
 
 ---
 
