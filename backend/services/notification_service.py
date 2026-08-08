@@ -7,10 +7,19 @@ import os
 import asyncio
 from typing import Dict, Any, Optional
 import httpx
+from dotenv import load_dotenv
+
+# Ensure environment variables from root .env are loaded
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 
 class NotificationService:
     def __init__(self):
+        self.reload_config()
+
+    def reload_config(self):
+        """Reload configuration from environment variables."""
         self.sendgrid_key = os.getenv("SENDGRID_API_KEY", "")
         self.twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
         self.twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "")
