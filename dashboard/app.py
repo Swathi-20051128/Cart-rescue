@@ -133,14 +133,14 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
-    /* All Labels, Widget Text, Sliders, Paragraphs, Subheaders & Markdowns */
-    label, p, span, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label, 
-    [data-testid="stMarkdownContainer"] p, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, 
-    .stMarkdown h3, .stMarkdown h4, div[data-baseweb="slider"] div, [data-testid="stSlider"] label,
-    div[data-testid="stCaptionContainer"] p, .stCaption {
+    /* Code backtick badges */
+    code, pre {
+        background-color: #e2e8f0 !important;
         color: #0b2e59 !important;
-        font-weight: 600 !important;
-        opacity: 1 !important;
+        font-weight: 700 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        border-radius: 6px !important;
+        padding: 2px 8px !important;
     }
 
     /* Slider track & thumb styling for clean visibility */
@@ -940,28 +940,30 @@ elif "🎭 Demo Scenarios" in page:
             with st.expander(f"**{i+1}. {scenario['name'].upper().replace('_', ' ')}** — {scenario['description']}"):
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    st.caption(f"Expected: `{scenario.get('expected', 'See result')}`")
+                    st.markdown(f"**Expected Action:** `{scenario.get('expected', 'See result')}`")
                 with col2:
-                    if st.button(f"▶ Run", key=f"demo_{scenario['name']}"):
+                    if st.button(f"▶ Run Scenario", key=f"demo_{scenario['name']}"):
                         with st.spinner(f"Running {scenario['name']}..."):
                             result = api_call(f"/api/v1/demo/run/{scenario['name']}", method="POST")
-                        
                         if result:
-                            res = result.get("result", {})
-                            risk = res.get("risk_score", 0)
-                            action = res.get("action", {}).get("action_type", "?")
-                            diag = res.get("diagnosis", {}).get("root_cause", "?")
-                            
-                            st.success(f"✅ Risk: {risk:.0%} | Diagnosis: {diag} | Action: {action}")
-                            
-                            if action == scenario.get("expected"):
-                                st.balloons()
-                                st.success(f"🎯 Action matches expected: `{action}`")
-                            else:
-                                st.warning(f"⚠️ Expected `{scenario.get('expected')}` but got `{action}`")
-                            
-                            with st.expander("Full Result"):
-                                st.json(res)
+                            st.session_state[f"demo_res_{scenario['name']}"] = result.get("result", {})
+
+                # Always render result from session_state so it survives reruns
+                res = st.session_state.get(f"demo_res_{scenario['name']}")
+                if res:
+                    risk   = res.get("risk_score", 0)
+                    action = res.get("action", {}).get("action_type", "?")
+                    diag   = res.get("diagnosis", {}).get("root_cause", "?")
+
+                    st.success(f"✅ **Risk Score**: {risk:.0%} &nbsp;|&nbsp; **Diagnosis**: `{diag}` &nbsp;|&nbsp; **Recommended Action**: `{action}`")
+
+                    if action == scenario.get("expected"):
+                        st.success(f"🎯 **Success**: Action matches expected `{action}`")
+                    else:
+                        st.warning(f"⚠️ Expected `{scenario.get('expected')}` but got `{action}`")
+
+                    if st.checkbox("🔍 Show full result JSON", key=f"json_{scenario['name']}"):
+                        st.json(res)
 
 
 # ── Uplift Analysis Page ──────────────────────────────────────────────────────
