@@ -164,6 +164,21 @@ def action_color(action: str) -> str:
     return colors.get(action, "#74b9ff")
 
 
+def _interpret_signal(signal: str, value: float) -> str:
+    """Interpret a 0-1 signal value as a human-readable label."""
+    interpretations = {
+        "hesitation_score":  ["Decisive", "Slightly hesitant", "Hesitant", "Very hesitant"],
+        "price_sensitivity": ["Not price-sensitive", "Slightly price-sensitive", "Price-sensitive", "Highly price-sensitive"],
+        "funnel_friction":   ["Smooth journey", "Minor friction", "Significant friction", "Severe friction"],
+        "comparison_intent": ["Focused buyer", "Some comparison", "Active comparison", "Heavy comparison"],
+        "urgency_score":     ["Low urgency", "Moderate urgency", "High urgency", "Very urgent"],
+        "payment_risk":      ["No payment risk", "Low risk", "Medium risk", "High payment risk"],
+    }
+    labels = interpretations.get(signal, ["Low", "Medium", "High", "Very High"])
+    idx = min(int(value * 4), 3)
+    return labels[idx]
+
+
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="sidebar-header">🛒 CartGuard AI v2.0</div>', unsafe_allow_html=True)
@@ -345,8 +360,14 @@ elif "🔬 Score Session" in page:
             st.subheader("Consent")
             is_dnd = st.checkbox("DND Registered", value=False)
             email_opt = st.checkbox("Email Opt-In", value=True)
-            sms_opt = st.checkbox("SMS Opt-In", value=True)
-            user_email = st.text_input("User Email (optional)", "")
+            sms_opt  = st.checkbox("SMS Opt-In", value=True)
+            user_email    = st.text_input("User Email (optional)", "")
+            user_mobile   = st.text_input("&#128241; Mobile Number (for SMS)", "",
+                                          placeholder="+91 98765 43210",
+                                          help="Used only for notification preview")
+            user_whatsapp = st.text_input("&#128994; WhatsApp Number", "",
+                                          placeholder="+91 98765 43210",
+                                          help="Used only for notification preview")
         
         submitted = st.form_submit_button("🚀 Score Session", use_container_width=True)
     
@@ -376,6 +397,10 @@ elif "🔬 Score Session" in page:
             "sms_opt_in": sms_opt,
             "user_email": user_email,
         }
+        # save contact info in session_state so notification cards can use it
+        st.session_state["preview_mobile"]    = user_mobile.strip()
+        st.session_state["preview_whatsapp"]  = user_whatsapp.strip()
+        st.session_state["preview_email"]     = user_email.strip()
         
         with st.spinner("⚡ Scoring session through AI agents..."):
             result = api_call("/api/v1/score", method="POST", data=payload)
@@ -428,24 +453,99 @@ elif "🔬 Score Session" in page:
                     st.markdown(f"- {e}")
             
             # Action
-            action = result.get("action", {})
-            st.subheader("⚡ Recommended Action")
+            action      = result.get("action", {})
+            action_type = action.get("action_type", "DO_NOTHING")
+            msg         = action.get("message", "")
+            channel     = action.get("channel", "IN_APP")
+            discount    = action.get("discount_amount", 0)
+
+            st.subheader("&#9889; Recommended Action")
             acol1, acol2 = st.columns([1, 2])
             with acol1:
-                action_type = action.get("action_type", "DO_NOTHING")
                 color = action_color(action_type)
                 st.markdown(
-                    f'<span style="background:{color};color:white;padding:8px 16px;'
-                    f'border-radius:20px;font-weight:700;font-size:14px;">'
+                    f'<span style="background:{color};color:white;padding:8px 18px;'
+                    f'border-radius:20px;font-weight:700;font-size:14px;letter-spacing:0.3px;">'
                     f'{action_type}</span>',
                     unsafe_allow_html=True,
                 )
-                if action.get("discount_amount", 0) > 0:
-                    st.metric("Discount", f"₹{action['discount_amount']:.0f}")
+                st.write("")
+                if discount > 0:
+                    st.metric("Discount Offered", f"&#8377;{discount:.0f}")
+                st.caption(f"&#128226; Channel: **{channel}**")
             with acol2:
-                if action.get("message"):
-                    st.info(f"💬 {action.get('message', '')}")
-                st.caption(f"📢 Channel: {action.get('channel', 'IN_APP')}")
+                if msg:
+                    st.info(f"&#128172; {msg}")
+
+            # ── Notification Previews ─────────────────────────────────────────
+            if action_type != "DO_NOTHING" and msg:
+                st.markdown("#### &#128232; Notification Previews")
+
+                mob = st.session_state.get("preview_mobile", "")
+                wa  = st.session_state.get("preview_whatsapp", "")
+                em  = st.session_state.get("preview_email", "")
+
+                def _safe(t):
+                    return t.encode("utf-8", errors="replace").decode("utf-8")
+
+                msg_s   = _safe(msg)
+                msg_120 = _safe(msg[:120] + ("..." if len(msg) > 120 else ""))
+
+                email_cta = (f'<div style="margin-top:8px;background:#EDC951;color:#0B2E59;'
+                             f'display:inline-block;padding:4px 14px;border-radius:6px;'
+                             f'font-weight:700;font-size:0.75rem;">Save &#8377;{discount:.0f} Now &#8594;</div>'
+                             if discount > 0 else "")
+                sms_disc = f" Code SAVE{int(discount)} &mdash; &#8377;{int(discount)} off!" if discount > 0 else ""
+                wa_disc  = f'<br><br>&#128176; <b>&#8377;{int(discount)} off &mdash; limited time!</b>' if discount > 0 else ""
+
+                card = ('background:#ffffff;border:1px solid #ccd6e8;border-radius:12px;'
+                        'padding:16px 18px;box-shadow:0 2px 8px rgba(11,46,89,0.07);')
+                to_style = 'font-size:0.72rem;color:#3a5a8a;margin-bottom:7px;'
+
+                email_html = (
+                    f'<div style="{card}">'
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                    '<span style="font-size:1.3rem;">&#128231;</span>'
+                    '<span style="font-weight:700;color:#0B2E59;font-size:0.9rem;">Email</span></div>'
+                    f'<div style="{to_style}">&#128231; <b>To:</b> {em if em else "<i>no email entered</i>"}</div>'
+                    '<div style="font-size:0.78rem;color:#3a5a8a;font-weight:600;margin-bottom:4px;">'
+                    'Subject: Exclusive offer just for you &#127873;</div>'
+                    '<div style="font-size:0.82rem;color:#1e3a5a;line-height:1.5;background:#f4f6fb;'
+                    'border-left:3px solid #0B2E59;padding:8px 10px;border-radius:0 6px 6px 0;">'
+                    + msg_s + '</div>' + email_cta + '</div>'
+                )
+
+                sms_html = (
+                    f'<div style="{card}">'
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                    '<span style="font-size:1.3rem;">&#128172;</span>'
+                    '<span style="font-weight:700;color:#0B2E59;font-size:0.9rem;">SMS</span></div>'
+                    f'<div style="{to_style}">&#128222; <b>To:</b> {mob if mob else "<i>no number entered</i>"}</div>'
+                    '<div style="background:#EAFDE6;border-radius:12px 12px 12px 2px;'
+                    'padding:10px 13px;font-size:0.82rem;color:#1a3a1a;line-height:1.5;">'
+                    'CartGuard: ' + msg_120 + sms_disc + '</div>'
+                    '<div style="font-size:0.7rem;color:#3a5a8a;margin-top:6px;">'
+                    'Delivered via SMS &middot; Reply STOP to opt out</div></div>'
+                )
+
+                wa_html = (
+                    f'<div style="{card}">'
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+                    '<span style="font-size:1.3rem;">&#128994;</span>'
+                    '<span style="font-weight:700;color:#0B2E59;font-size:0.9rem;">WhatsApp</span></div>'
+                    f'<div style="{to_style}">&#128994; <b>To:</b> {wa if wa else "<i>no number entered</i>"}</div>'
+                    '<div style="background:#dcf8c6;border-radius:12px 12px 12px 2px;'
+                    'padding:10px 13px;font-size:0.82rem;color:#1a3a1a;line-height:1.6;">'
+                    '<b>CartGuard AI &#128722;</b><br><br>'
+                    + msg_s + wa_disc + '</div>'
+                    '<div style="font-size:0.7rem;color:#3a5a8a;margin-top:6px;">'
+                    'Sent via WhatsApp Business API</div></div>'
+                )
+
+                nc1, nc2, nc3 = st.columns(3)
+                with nc1: st.markdown(email_html, unsafe_allow_html=True)
+                with nc2: st.markdown(sms_html,   unsafe_allow_html=True)
+                with nc3: st.markdown(wa_html,    unsafe_allow_html=True)
             
             # Self-check
             self_check = result.get("self_check", {})
