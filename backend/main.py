@@ -506,6 +506,13 @@ async def seed_demo_data():
     return {"status": "success", "message": "Audit database initialized and dummy records seeded."}
 
 
+@app.get("/api/v1/uplift/simulate", tags=["Uplift"])
+async def simulate_uplift(n_sessions: int = 10000):
+    """Run synthetic uplift simulation."""
+    from services.uplift_service import uplift_simulator
+    return uplift_simulator.simulate_ab_test(n_sessions=n_sessions)
+
+
 # ──────────────────────────── Demo Scenarios ────────────────────────────
 # NOTE: keys below match the `SessionData` model fields exactly. The previous
 # version used fields (checkout_reached, mouse_velocity, scroll_speed,
