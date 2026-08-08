@@ -158,6 +158,30 @@ st.markdown("""
         font-weight: 600 !important;
     }
 
+    /* JSON Viewer Light Theme & High-Contrast Styling */
+    [data-testid="stJson"], .react-json-view, div[data-testid="stJson"] pre {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        padding: 14px !important;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.03) !important;
+    }
+    [data-testid="stJson"] * {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    .react-json-view .variable-name, .react-json-view span[style*="color"] {
+        color: #0b2e59 !important;
+        font-weight: 700 !important;
+    }
+    .react-json-view .string-value, [data-testid="stJson"] .string {
+        color: #0284c7 !important;
+        font-weight: 600 !important;
+    }
+    .react-json-view .number-value, .react-json-view .boolean-value, [data-testid="stJson"] .number, [data-testid="stJson"] .boolean {
+        color: #d97706 !important;
+        font-weight: 700 !important;
+    }
+
     /* Sidebar */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
