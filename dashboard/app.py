@@ -128,9 +128,29 @@ st.markdown("""
     }
 
     /* Radio buttons & Checkboxes */
-    div[role="radiogroup"] label, [data-testid="stCheckbox"] label {
+    div[role="radiogroup"] label, [data-testid="stCheckbox"] label, [data-testid="stCheckbox"] span, [data-testid="stCheckbox"] p {
+        color: #0b2e59 !important;
+        font-weight: 700 !important;
+        opacity: 1 !important;
+    }
+
+    /* All Paragraphs, Spans, Labels, Captions & Markdowns */
+    p, span, label, [data-testid="stMarkdownContainer"] p, .stMarkdown p, 
+    [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] label,
+    div[data-testid="stCaptionContainer"] p, .stCaption {
         color: #0b2e59 !important;
         font-weight: 600 !important;
+        opacity: 1 !important;
+    }
+
+    /* Alert Boxes (st.success, st.warning, st.info, st.error) */
+    [data-testid="stAlert"] {
+        border-radius: 10px !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+    [data-testid="stAlert"] * {
+        color: #0b2e59 !important;
+        font-weight: 700 !important;
     }
 
     /* Code backtick badges */
