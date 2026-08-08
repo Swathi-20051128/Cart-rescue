@@ -395,7 +395,11 @@ elif "🔬 Score Session" in page:
             "is_dnd_registered": is_dnd,
             "email_opt_in": email_opt,
             "sms_opt_in": sms_opt,
-            "user_email": user_email,
+            "whatsapp_opt_in": True if user_whatsapp.strip() else False,
+            "user_email": user_email.strip(),
+            "user_phone": user_mobile.strip() or user_whatsapp.strip(),
+            "user_mobile": user_mobile.strip(),
+            "user_whatsapp": user_whatsapp.strip(),
         }
         # save contact info in session_state so notification cards can use it
         st.session_state["preview_mobile"]    = user_mobile.strip()

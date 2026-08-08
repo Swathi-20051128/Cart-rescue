@@ -353,7 +353,13 @@ async def score_session_v1(session: SessionData, background_tasks: BackgroundTas
         
         # Notification if action recommended
         action = result.get("action", {})
-        if action.get("action_type") not in ["DO_NOTHING", None] and session.user_email:
+        has_contact = bool(
+            session_dict.get("user_email")
+            or session_dict.get("user_phone")
+            or session_dict.get("user_mobile")
+            or session_dict.get("user_whatsapp")
+        )
+        if action.get("action_type") not in ["DO_NOTHING", None] and has_contact:
             background_tasks.add_task(
                 notification_service.send_notification,
                 session_dict, action
