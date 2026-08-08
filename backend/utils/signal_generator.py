@@ -210,7 +210,7 @@ class BehavioralSignalGenerator:
             cart_value_changes=sd.get("cart_value_changes", 0),
             product_views=sd.get("product_views", 0),
             category_switches=sd.get("category_switches", 0),
-            original_cart_value=sd.get("original_cart_value", sd.get("cart_value", 100)),
+            original_cart_value=sd.get("original_cart_value") or sd.get("cart_value") or 100,
             current_cart_value=sd.get("cart_value", 100),
         )
 

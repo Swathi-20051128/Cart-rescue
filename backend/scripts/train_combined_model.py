@@ -50,6 +50,20 @@ def load_synthetic_data(n_samples: int) -> pd.DataFrame:
     return df
 
 
+def compute_sample_weights(df: pd.DataFrame, payment_failure_boost: float = 12.0) -> np.ndarray:
+    """Up-weight payment-failure sessions.
+
+    The real 2019-Oct dataset has zero payment-failure events (~94k rows),
+    so the ~8k synthetic payment-failure rows get drowned out during
+    training and payment signals fall out of the model's top feature
+    importances entirely. Boosting their sample weight keeps them
+    influential without discarding the real behavioral data.
+    """
+    weights = np.ones(len(df))
+    weights[df["payment_failures"] > 0] *= payment_failure_boost
+    return weights
+
+
 def add_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
     df["payment_failure_rate"] = df["payment_failures"] / df["payment_attempts"].clip(lower=1)
     df["view_to_cart_ratio"] = df["product_views"] / df["cart_adds"].clip(lower=1)
@@ -105,12 +119,14 @@ def main():
 
     X_train_pool = train_combined[FEATURE_COLUMNS].fillna(0)
     y_train_pool = train_combined["abandoned"].astype(int)
+    sample_weights = compute_sample_weights(train_combined)
 
     print(f"\nTraining data shape: {X_train_pool.shape}")
     print(f"Overall abandonment rate (train pool): {y_train_pool.mean():.2%}")
+    print(f"Payment-failure rows up-weighted 12x: {(sample_weights > 1).sum():,} of {len(sample_weights):,}")
 
     model = EnsembleRiskModel()
-    model.fit(X_train_pool, y_train_pool)
+    model.fit(X_train_pool, y_train_pool, sample_weight=sample_weights)
 
     # --- Honest evaluation: REAL-ONLY holdout, never seen in any form ---
     print("\nEngineering features (real-only holdout)...")

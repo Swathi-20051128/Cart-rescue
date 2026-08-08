@@ -269,7 +269,7 @@ class AgentOrchestrator:
             })
 
         # Step 2: Synthesize final root cause diagnosis
-        final = self.synthesize_diagnoses(diagnoses)
+        final = self.synthesize_diagnoses(diagnoses, session_data)
         final["latency_ms"] = round((time.time() - start_time) * 1000, 2)
 
         self.conversation_history.append({
@@ -281,8 +281,9 @@ class AgentOrchestrator:
 
         return final
 
-    def synthesize_diagnoses(self, diagnoses: Dict[str, Any]) -> Dict[str, Any]:
+    def synthesize_diagnoses(self, diagnoses: Dict[str, Any], session_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """Weighted priority aggregation of specialized agent outputs."""
+        session_data = session_data or {}
         pay = diagnoses.get("payment", {})
         price = diagnoses.get("price", {})
         hes = diagnoses.get("hesitation", {})
@@ -298,14 +299,39 @@ class AgentOrchestrator:
                 "agent_details": pay,
             }
 
-        # Priority 2: Price Sensitivity with High Confidence
+        # Priority 2: Price Sensitivity with High Confidence.
+        # Distinguish COMPARISON_SHOPPING (browsing/tab-switching to compare
+        # options) from PRICE_SENSITIVITY (actively dropping cart value —
+        # removals or a falling cart total): downstream PolicyAgent/ActionAgent
+        # only recognize these two specific labels, not the generic
+        # "PRICE_SHOPPING" this used to always return.
         if price.get("is_price_sensitive") and price.get("confidence", 0) > 0.6:
+            original_cv = session_data.get("original_cart_value")
+            current_cv = session_data.get("cart_value", 0)
+            cart_removals = session_data.get("cart_removes", 0)
+            price_driven = (original_cv is not None and original_cv > current_cv) or cart_removals >= 2
             return {
-                "root_cause": "PRICE_SHOPPING",
+                "root_cause": "PRICE_SENSITIVITY" if price_driven else "COMPARISON_SHOPPING",
                 "confidence": price.get("confidence", 0.8),
                 "evidence": price.get("evidence", ["Price comparison signals detected"]),
                 "recommended_action": price.get("recommended_action", "VALUE_REASSURANCE"),
                 "agent_details": price,
+            }
+
+        # Priority 2.5: Pure browsing / no cart engagement at all — this must
+        # be checked before friction, since a long, high-view session with
+        # zero cart adds and no checkout activity is LOW_INTENT, not friction
+        # (raw session duration alone was previously inflating friction_score
+        # for these sessions).
+        cart_adds = session_data.get("cart_adds", 0)
+        checkout_started = session_data.get("checkout_steps_completed", 0) or session_data.get("payment_attempts", 0)
+        if cart_adds == 0 and not checkout_started:
+            return {
+                "root_cause": "LOW_INTENT",
+                "confidence": intent.get("confidence", 0.85),
+                "evidence": intent.get("evidence", ["No cart engagement in session"]),
+                "recommended_action": "DO_NOTHING",
+                "agent_details": intent,
             }
 
         # Priority 3: Friction / Hesitation with High Score

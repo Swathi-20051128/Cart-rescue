@@ -4,6 +4,7 @@ Multi-agent pipeline: Signal → Risk → Diagnosis → Policy → Action → Se
 """
 import asyncio
 import json
+import re
 import time
 import os
 from typing import Dict, Any, Optional, List
@@ -94,36 +95,87 @@ class LLMClient:
             return response.json()["choices"][0]["message"]["content"]
 
     def _rule_based_fallback(self, prompt: str) -> str:
-        """Rule-based fallback when no LLM is configured."""
-        prompt_lower = prompt.lower()
-        if "payment" in prompt_lower and "fail" in prompt_lower:
-            return json.dumps({
-                "root_cause": "PAYMENT_FAILURE",
-                "confidence": 0.85,
-                "evidence": ["Multiple payment attempts detected", "Extended time on payment page"],
-                "recommendation": "ALTERNATE_PAYMENT_GUIDANCE"
-            })
-        elif "comparison" in prompt_lower or "tab" in prompt_lower:
-            return json.dumps({
-                "root_cause": "COMPARISON_SHOPPING",
-                "confidence": 0.78,
-                "evidence": ["High product views", "Multiple category switches"],
-                "recommendation": "SOCIAL_PROOF_NUDGE"
-            })
-        elif "friction" in prompt_lower or "form" in prompt_lower:
-            return json.dumps({
-                "root_cause": "CHECKOUT_FRICTION",
-                "confidence": 0.72,
-                "evidence": ["Form errors detected", "Multiple back navigations"],
-                "recommendation": "CHECKOUT_ASSISTANCE"
-            })
+        """Rule-based fallback when no LLM is configured.
+
+        Prompt-shape-aware: the ACTION_PROMPT and DIAGNOSIS_PROMPT templates
+        both contain every candidate keyword ("payment", "fail", "friction",
+        etc.) somewhere in their static instructions/rules text, so a naive
+        keyword search over the full prompt always matched the first branch
+        regardless of the actual session. Instead: (1) detect which JSON
+        shape the caller expects from a marker unique to that template, and
+        (2) extract the real root cause from the "Root Cause: X" context
+        line the caller substituted in, rather than keyword-searching the
+        whole prompt.
+        """
+        is_action_prompt = '"action_type":' in prompt
+
+        root_cause = None
+        match = re.search(r"Root Cause:\s*([A-Z_]+)", prompt)
+        if match:
+            root_cause = match.group(1)
         else:
-            return json.dumps({
-                "root_cause": "UNKNOWN",
-                "confidence": 0.50,
-                "evidence": ["Mixed signals"],
-                "recommendation": "DO_NOTHING"
-            })
+            prompt_lower = prompt.lower()
+            if "payment" in prompt_lower and "fail" in prompt_lower:
+                root_cause = "PAYMENT_FAILURE"
+            elif "comparison" in prompt_lower or "tab" in prompt_lower:
+                root_cause = "COMPARISON_SHOPPING"
+            elif "friction" in prompt_lower or "form" in prompt_lower:
+                root_cause = "CHECKOUT_FRICTION"
+
+        if is_action_prompt:
+            action_map = {
+                "PAYMENT_FAILURE": {
+                    "action_type": "ALTERNATE_PAYMENT_GUIDANCE", "channel": "IN_APP",
+                    "message": "Having trouble paying? Try UPI, netbanking, or COD — all available for your order!",
+                    "discount_amount": 0, "discount_type": "NONE", "urgency": "HIGH",
+                    "reasoning": "Rule-based fallback: payment failure detected.",
+                },
+                "COMPARISON_SHOPPING": {
+                    "action_type": "SOCIAL_PROOF_NUDGE", "channel": "IN_APP",
+                    "message": "Best price guaranteed! Plus 2-day delivery & free returns on this item.",
+                    "discount_amount": 0, "discount_type": "NONE", "urgency": "MEDIUM",
+                    "reasoning": "Rule-based fallback: comparison shopping detected.",
+                },
+                "CHECKOUT_FRICTION": {
+                    "action_type": "CHECKOUT_ASSISTANCE", "channel": "IN_APP",
+                    "message": "Need help completing your order? Chat with us — we're here to help!",
+                    "discount_amount": 0, "discount_type": "NONE", "urgency": "MEDIUM",
+                    "reasoning": "Rule-based fallback: checkout friction detected.",
+                },
+                "PRICE_SENSITIVITY": {
+                    "action_type": "LIMITED_OFFER", "channel": "IN_APP",
+                    "message": "Special offer: complete your checkout in the next 15 minutes to save!",
+                    "discount_amount": 0, "discount_type": "FIXED", "urgency": "HIGH",
+                    "reasoning": "Rule-based fallback: price sensitivity detected.",
+                },
+            }
+            return json.dumps(action_map.get(root_cause, {
+                "action_type": "DO_NOTHING", "channel": "DO_NOTHING", "message": "",
+                "discount_amount": 0, "discount_type": "NONE", "urgency": "LOW",
+                "reasoning": "Rule-based fallback: no clear pattern detected.",
+            }))
+
+        diagnosis_map = {
+            "PAYMENT_FAILURE": {
+                "root_cause": "PAYMENT_FAILURE", "confidence": 0.85,
+                "evidence": ["Multiple payment attempts detected", "Extended time on payment page"],
+                "recommendation": "ALTERNATE_PAYMENT_GUIDANCE",
+            },
+            "COMPARISON_SHOPPING": {
+                "root_cause": "COMPARISON_SHOPPING", "confidence": 0.78,
+                "evidence": ["High product views", "Multiple category switches"],
+                "recommendation": "SOCIAL_PROOF_NUDGE",
+            },
+            "CHECKOUT_FRICTION": {
+                "root_cause": "CHECKOUT_FRICTION", "confidence": 0.72,
+                "evidence": ["Form errors detected", "Multiple back navigations"],
+                "recommendation": "CHECKOUT_ASSISTANCE",
+            },
+        }
+        return json.dumps(diagnosis_map.get(root_cause, {
+            "root_cause": "UNKNOWN", "confidence": 0.50,
+            "evidence": ["Mixed signals"], "recommendation": "DO_NOTHING",
+        }))
 
 
 llm_client = LLMClient()
@@ -530,6 +582,13 @@ Respond in JSON:
             else:
                 action = self._rule_based_action(diagnosis, policy, session_data)
         except Exception:
+            action = self._rule_based_action(diagnosis, policy, session_data)
+
+        # Defensive check: the parsed JSON must actually be action-shaped.
+        # If it's missing action_type (e.g. a diagnosis-shaped payload leaked
+        # through), fall back to the deterministic rule-based action instead
+        # of silently producing action_type: None.
+        if not action.get("action_type"):
             action = self._rule_based_action(diagnosis, policy, session_data)
 
         # Enforce guardrails

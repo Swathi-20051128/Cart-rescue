@@ -128,10 +128,16 @@ class EnsembleRiskModel:
         self.weights = {"catboost": 0.50, "xgboost": 0.35, "gbt": 0.15}
         self.is_fitted = False
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=0.2, stratify=y, random_state=42
-        )
+    def fit(self, X: pd.DataFrame, y: pd.Series, sample_weight: pd.Series = None):
+        if sample_weight is not None:
+            X_train, X_val, y_train, y_val, w_train, w_val = train_test_split(
+                X, y, sample_weight, test_size=0.2, stratify=y, random_state=42
+            )
+        else:
+            X_train, X_val, y_train, y_val = train_test_split(
+                X, y, test_size=0.2, stratify=y, random_state=42
+            )
+            w_train = w_val = None
 
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_val_scaled = self.scaler.transform(X_val)
@@ -150,7 +156,10 @@ class EnsembleRiskModel:
                 random_seed=42,
                 verbose=50,
             )
-            self.catboost.fit(X_train, y_train, eval_set=(X_val, y_val), early_stopping_rounds=30)
+            self.catboost.fit(
+                X_train, y_train, sample_weight=w_train,
+                eval_set=(X_val, y_val), early_stopping_rounds=30,
+            )
             cb_preds = self.catboost.predict_proba(X_val)[:, 1]
             results["catboost"] = roc_auc_score(y_val, cb_preds)
             print(f"CatBoost AUC: {results['catboost']:.4f}")
@@ -169,7 +178,7 @@ class EnsembleRiskModel:
                 verbosity=1,
             )
             self.xgboost.fit(
-                X_train_scaled, y_train,
+                X_train_scaled, y_train, sample_weight=w_train,
                 eval_set=[(X_val_scaled, y_val)],
                 verbose=50,
             )
@@ -182,7 +191,7 @@ class EnsembleRiskModel:
         self.gbt = GradientBoostingClassifier(
             n_estimators=200, max_depth=5, learning_rate=0.05, random_state=42
         )
-        self.gbt.fit(X_train_scaled, y_train)
+        self.gbt.fit(X_train_scaled, y_train, sample_weight=w_train)
         gbt_preds = self.gbt.predict_proba(X_val_scaled)[:, 1]
         results["gbt"] = roc_auc_score(y_val, gbt_preds)
         print(f"GBT AUC: {results['gbt']:.4f}")

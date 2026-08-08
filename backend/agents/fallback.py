@@ -55,7 +55,12 @@ class RuleBasedFallbackEngine:
         cart_removals = session.get("cart_removals", 0) or session.get("cart_removes", 0)
         tab_loss = session.get("tab_loss_count", 0) or session.get("tab_switches", 0)
 
-        is_sensitive = (product_views >= 8 and cart_adds <= 2) or tab_loss >= 3 or cart_removals >= 2
+        # Require at least one cart engagement — a pure zero-add browsing
+        # session (any number of views/tab switches) is LOW_INTENT, not
+        # price-sensitive comparison shopping.
+        is_sensitive = cart_adds > 0 and (
+            (product_views >= 8 and cart_adds <= 2) or tab_loss >= 3 or cart_removals >= 2
+        )
         score = min(10, int(product_views * 0.5 + tab_loss * 1.5 + cart_removals * 2))
 
         pattern = "none"

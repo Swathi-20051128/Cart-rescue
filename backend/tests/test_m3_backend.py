@@ -26,7 +26,7 @@ class TestM3Backend(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data.get("status"), "ok")
+        self.assertEqual(data.get("status"), "online")
         self.assertIn("timestamp", data)
 
     def test_metrics_endpoint(self):
