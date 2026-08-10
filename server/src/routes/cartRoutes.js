@@ -5,6 +5,8 @@ import {
   updateCartItem,
   removeFromCart,
   trackSignal,
+  heartbeat,
+  goodbye,
 } from "../controllers/cartController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
@@ -16,5 +18,7 @@ router.post("/add", addToCart);
 router.put("/update", updateCartItem);
 router.delete("/:productId", removeFromCart);
 router.post("/signal", trackSignal);
+router.post("/heartbeat", heartbeat);
+router.post("/goodbye", goodbye);
 
 export default router;

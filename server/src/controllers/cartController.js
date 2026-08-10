@@ -129,4 +129,29 @@ export const trackSignal = async (req, res) => {
   res.json({ cart, risk });
 };
 
-export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal };
+export const heartbeat = async (req, res) => {
+  try {
+    const cart = await getOrCreateCart(req.user);
+    cart.lastActivity = new Date();
+    await cart.save();
+    res.json({ ok: true, lastActivity: cart.lastActivity });
+  } catch (err) {
+    res.status(500).json({ message: "Heartbeat failed", detail: err.message });
+  }
+};
+
+export const goodbye = async (req, res) => {
+  try {
+    const cart = await getOrCreateCart(req.user);
+    // Push lastActivity 10 minutes into the past — user appears INACTIVE immediately
+    cart.lastActivity = new Date(Date.now() - 10 * 60 * 1000);
+    await cart.save();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: "Goodbye failed", detail: err.message });
+  }
+};
+
+export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal, heartbeat, goodbye };
+
+

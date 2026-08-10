@@ -7,6 +7,7 @@ import Store from "./pages/store/Store.jsx";
 import ProductDetail from "./pages/store/ProductDetail.jsx";
 import CartPage from "./pages/store/CartPage.jsx";
 import Checkout from "./pages/store/Checkout.jsx";
+import Orders from "./pages/store/Orders.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 
 function App() {
@@ -14,10 +15,13 @@ function App() {
     <>
       <Navbar />
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
 
         <Route path="/" element={
+          <ProtectedRoute role="user"><Store /></ProtectedRoute>
+        } />
+        <Route path="/shop" element={
           <ProtectedRoute role="user"><Store /></ProtectedRoute>
         } />
         <Route path="/product/:id" element={
@@ -28,6 +32,9 @@ function App() {
         } />
         <Route path="/checkout" element={
           <ProtectedRoute role="user"><Checkout /></ProtectedRoute>
+        } />
+        <Route path="/orders" element={
+          <ProtectedRoute role="user"><Orders /></ProtectedRoute>
         } />
 
         <Route path="/admin" element={

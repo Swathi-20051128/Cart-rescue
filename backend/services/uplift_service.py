@@ -143,7 +143,7 @@ class UpliftSimulator:
             },
             "statistical_significance": {
                 "p_value": round(p_value, 4),
-                "is_significant": p_value < 0.05,
+                "is_significant": bool(p_value < 0.05),
                 "confidence_level": "95%",
                 "ci_lower_pp": round(ci_lower * 100, 2),
                 "ci_upper_pp": round(ci_upper * 100, 2),

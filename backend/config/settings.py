@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # LLM Settings
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq")
-    GROQ_MODEL: str = "llama-3.2-3b-preview"
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
     OPENAI_MODEL: str = "gpt-4o-mini"
     LOCAL_LLM_URL: str = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
 

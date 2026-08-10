@@ -34,7 +34,7 @@ class LLMClient:
         self.groq_key = os.getenv("GROQ_API_KEY", "")
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
         self.provider = os.getenv("LLM_PROVIDER", "groq")
-        self.groq_model = "llama-3.2-3b-preview"
+        self.groq_model = "llama-3.1-8b-instant"
         self.openai_model = "gpt-4o-mini"
         self.local_url = os.getenv("LOCAL_LLM_URL", "http://localhost:11434")
 
@@ -77,7 +77,10 @@ class LLMClient:
                     "temperature": 0.1,
                 },
             )
-            return response.json()["choices"][0]["message"]["content"]
+            data = response.json()
+            if "choices" not in data:
+                raise RuntimeError(f"Groq API error: {data.get('error', data)}")
+            return data["choices"][0]["message"]["content"]
 
     async def _openai_complete(self, prompt: str, size: str) -> str:
         model = "gpt-4o" if size == "large" else "gpt-4o-mini"
@@ -92,7 +95,10 @@ class LLMClient:
                     "temperature": 0.1,
                 },
             )
-            return response.json()["choices"][0]["message"]["content"]
+            data = response.json()
+            if "choices" not in data:
+                raise RuntimeError(f"OpenAI API error: {data.get('error', data)}")
+            return data["choices"][0]["message"]["content"]
 
     def _rule_based_fallback(self, prompt: str) -> str:
         """Rule-based fallback when no LLM is configured.
@@ -683,7 +689,7 @@ class SelfCheckAgent:
         # Check 5: Logic (no discount for payment failure)
         checks["logic"] = self._check_logic(diagnosis, action)
 
-        # Check 6: LLM Self-Validation Layer
+        # Check 6: LLM Self-Validation Layer (advisory only — cannot override the 5 hard rule checks)
         try:
             from agents.llm_agents import SelfCheckValidator
             validator = SelfCheckValidator()
@@ -692,11 +698,15 @@ class SelfCheckAgent:
         except Exception:
             checks["llm_self_validation"] = True
 
-        all_passed = all(checks.values())
-        
+        # Only the 5 deterministic rule checks determine PASSED/FAILED.
+        # llm_self_validation is surfaced for transparency but never blocks a
+        # recommendation that already passed all business-rule checks.
+        hard_checks = {k: v for k, v in checks.items() if k != "llm_self_validation"}
+        all_passed = all(hard_checks.values())
+
         if not all_passed:
-            # Conservative fallback
-            failed = [k for k, v in checks.items() if not v]
+            # Conservative fallback only when a hard rule is violated
+            failed = [k for k, v in hard_checks.items() if not v]
             action = {
                 "action_type": "DO_NOTHING",
                 "channel": "DO_NOTHING",

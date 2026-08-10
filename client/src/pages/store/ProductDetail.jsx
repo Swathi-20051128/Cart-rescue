@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/axios.js";
+import useHeartbeat from "../../hooks/useHeartbeat.js";
+import { useCart } from "../../context/CartContext.jsx";
 
 const ProductDetail = () => {
+  useHeartbeat();
+  const { updateCartState } = useCart();
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
@@ -16,7 +20,8 @@ const ProductDetail = () => {
   if (!product) return <p className="page">Loading...</p>;
 
   const addToCart = async () => {
-    await api.post("/cart/add", { productId: product._id, quantity: qty });
+    const { data } = await api.post("/cart/add", { productId: product._id, quantity: qty });
+    updateCartState(data.cart);
     alert("Added to cart");
   };
 

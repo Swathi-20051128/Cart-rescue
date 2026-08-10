@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../../api/axios.js";
+import AgentPipeline from "../../components/AgentPipeline.jsx";
 
 const defaultForm = {
   session_id: "SES-MANUAL-001",
@@ -14,53 +15,109 @@ const defaultForm = {
   form_field_errors: 0,
 };
 
+// Quick-load scenario presets for demo
+const PRESETS = [
+  {
+    label: "💳 Payment Failure",
+    emoji: "💳",
+    values: { ...defaultForm, session_id: "SES-PAY-FAIL", payment_attempts: 3, payment_failures: 2, cart_value: 2499 },
+  },
+  {
+    label: "🔍 Comparison Shopper",
+    emoji: "🔍",
+    values: { ...defaultForm, session_id: "SES-COMPARE", tab_switches: 12, product_views: 18, cart_value: 899 },
+  },
+  {
+    label: "⚠️ High Risk Abandon",
+    emoji: "⚠️",
+    values: { ...defaultForm, session_id: "SES-HIGH-RISK", session_duration: 480, form_field_errors: 4, tab_switches: 8, cart_value: 3999 },
+  },
+  {
+    label: "✅ Low Risk",
+    emoji: "✅",
+    values: { ...defaultForm, session_id: "SES-LOW-RISK", cart_adds: 5, checkout_reached: 1, session_duration: 45 },
+  },
+];
+
 const ScoreSession = () => {
   const [form, setForm] = useState(defaultForm);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const set = (k, v) => setForm({ ...form, [k]: v });
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+    setResult(null);
     try {
       const { data } = await api.post("/admin/score-session", form);
       setResult(data);
     } catch (err) {
-      setResult({ error: err.response?.data?.detail || "ML service unavailable" });
+      setError(err.response?.data?.detail || "ML service unavailable");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const loadPreset = (preset) => {
+    setForm(preset.values);
+    setResult(null);
+    setError(null);
   };
 
   return (
     <div>
       <h2>Score a Session</h2>
-      <form className="score-form" onSubmit={submit}>
-        {Object.keys(defaultForm).map((key) => (
-          <label key={key}>
-            {key.replaceAll("_", " ")}
-            <input
-              type={key === "session_id" ? "text" : "number"}
-              value={form[key]}
-              onChange={(e) => set(key, key === "session_id" ? e.target.value : Number(e.target.value))}
-            />
-          </label>
-        ))}
-        <button type="submit" disabled={loading}>{loading ? "Scoring..." : "Score Session"}</button>
-      </form>
+      <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4, marginBottom: 16 }}>
+        Submit session data to watch the 6-agent AI pipeline analyze abandonment risk in real time.
+      </p>
 
-      {result && !result.error && (
-        <div className="risk-banner">
-          <p><b>Risk Score:</b> {(result.risk_score * 100).toFixed(1)}% ({result.risk_level})</p>
-          <p><b>Reason:</b> {result.reason}</p>
-          <p><b>Recommended Action:</b> {result.action} — {result.action_message}</p>
-          <p><b>Discount:</b> ₹{result.discount} via {result.channel}</p>
-          <p><b>Expected Margin:</b> ₹{result.expected_margin}</p>
-          <p><b>Latency:</b> {result.latency_ms} ms</p>
+      {/* Quick presets */}
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+        {PRESETS.map((p) => (
+          <button
+            key={p.label}
+            className="secondary"
+            style={{ padding: "7px 14px", fontSize: 12, width: "auto" }}
+            onClick={() => loadPreset(p)}
+            type="button"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "24px", alignItems: "start" }}>
+        {/* Form */}
+        <div>
+          <form className="score-form" onSubmit={submit}>
+            {Object.keys(defaultForm).map((key) => (
+              <label key={key}>
+                {key.replaceAll("_", " ")}
+                <input
+                  type={key === "session_id" ? "text" : "number"}
+                  value={form[key]}
+                  onChange={(e) =>
+                    set(key, key === "session_id" ? e.target.value : Number(e.target.value))
+                  }
+                />
+              </label>
+            ))}
+            <button type="submit" disabled={loading}>
+              {loading ? "🤖 Agents thinking…" : "▶ Run Agent Pipeline"}
+            </button>
+          </form>
+          {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
         </div>
-      )}
-      {result?.error && <p className="error">{result.error}</p>}
+
+        {/* Agent Pipeline visualizer */}
+        <div>
+          <AgentPipeline result={result} loading={loading} />
+        </div>
+      </div>
     </div>
   );
 };

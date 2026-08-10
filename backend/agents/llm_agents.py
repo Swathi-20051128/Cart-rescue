@@ -211,7 +211,35 @@ class SelfCheckValidator(CartGuardLLMAgent):
         self.PROMPT_TEMPLATE = SELF_CHECK_VALIDATION_PROMPT
 
     async def validate(self, diagnosis: Dict[str, Any], action: Dict[str, Any], policy: Dict[str, Any]) -> Dict[str, Any]:
-        context = {**diagnosis, **action, **policy}
+        # Build context with correctly-named keys matching the prompt template
+        action_type = action.get("action_type") or action.get("action", "DO_NOTHING")
+
+        # Short-circuit: DO_NOTHING actions are always valid — skip the LLM call entirely.
+        # This prevents low-risk / no-action sessions from being flagged as FAILED.
+        if action_type in ("DO_NOTHING", None, ""):
+            return {
+                "is_valid": True,
+                "safety_score": 1.0,
+                "violations": [],
+                "adjusted_action": "DO_NOTHING",
+                "reasoning": "DO_NOTHING requires no further validation.",
+                "escalated_to_large_model": False,
+            }
+
+        context = {
+            **diagnosis,
+            **policy,
+            # The prompt template uses {action} (string), not {action_type}
+            "action": action_type,
+            "discount_amount": action.get("discount_amount", action.get("discount", 0)),
+            "max_allowed_discount": policy.get("max_discount_inr", 0),
+            "channel": action.get("channel", "IN_APP"),
+            "consent_ok": policy.get("consent_ok", True),
+            "budget_ok": policy.get("budget_ok", True),
+            "risk_score": diagnosis.get("risk_score", 0),
+            "root_cause": diagnosis.get("root_cause", "UNKNOWN"),
+            "confidence": diagnosis.get("confidence", 0.5),
+        }
 
         # Two-tier model routing: only pay for the expensive model when the
         # diagnosis confidence is genuinely borderline (0.45-0.65). Clear-cut
@@ -224,6 +252,7 @@ class SelfCheckValidator(CartGuardLLMAgent):
         if "is_valid" not in res:
             return fallback_engine.validate_self_check(diagnosis, action, policy)
         return res
+
 
     def _execute_fallback(self, context: Dict[str, Any]) -> Dict[str, Any]:
         return fallback_engine.validate_self_check(context, context, context)
