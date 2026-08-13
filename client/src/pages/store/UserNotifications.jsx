@@ -9,9 +9,12 @@ export default function UserNotifications() {
   useEffect(() => {
     api.get("/cart/notifications")
       .then((res) => {
-        // Log is returned directly or as logs list
         const logs = res.data.logs || res.data || [];
-        setNotifications(logs);
+        const activeNotifs = logs.filter(n => {
+          const actionType = n.action_type || n.full_result_json?.action?.action_type || "";
+          return actionType && actionType !== "DO_NOTHING" && actionType !== "NONE";
+        });
+        setNotifications(activeNotifs);
       })
       .catch((err) => console.error("Failed to load notifications", err))
       .finally(() => setLoading(false));
