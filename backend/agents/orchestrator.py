@@ -27,6 +27,40 @@ class AgentConversation:
     total_cost_inr: float = 0.0
 
 
+def check_cart_comparison_pattern(session_data: Dict[str, Any]) -> bool:
+    """Detect if there are two similar items in the cart with different prices (Comparison intent)."""
+    items = session_data.get("cart_items", [])
+    if not items or len(items) < 2:
+        return False
+    
+    # Compare each pair of items
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            item1 = items[i]
+            item2 = items[j]
+            
+            name1 = (item1.get("name") or "").lower().strip()
+            name2 = (item2.get("name") or "").lower().strip()
+            price1 = float(item1.get("price") or 0)
+            price2 = float(item2.get("price") or 0)
+            
+            # Extract first 2 words for comparison (e.g. "non-stick cookware" vs "non-stick cookware")
+            words1 = name1.split()
+            words2 = name2.split()
+            
+            min_len = min(len(words1), len(words2))
+            if min_len >= 2:
+                common_prefix = words1[:2] == words2[:2]
+            else:
+                common_prefix = name1 == name2
+                
+            # If names look similar but prices are different, they are comparing!
+            if common_prefix and price1 != price2:
+                return True
+                
+    return False
+
+
 class LLMClient:
     """Unified LLM client supporting Groq (Llama), OpenAI, and local Ollama."""
 
@@ -272,6 +306,17 @@ Respond in JSON:
     ) -> Dict[str, Any]:
         start = time.time()
         
+        if check_cart_comparison_pattern(session_data):
+            latency = (time.time() - start) * 1000
+            return {
+                "root_cause": "COMPARISON_SHOPPING",
+                "confidence": 0.98,
+                "evidence": ["Two similar items with different prices found in cart"],
+                "recommendation": "SOCIAL_PROOF_NUDGE",
+                "latency_ms": latency,
+                "cost_inr": 0.001
+            }
+        
         try:
             from agents.llm_agents import AgentOrchestrator
             agent_orch = AgentOrchestrator()
@@ -437,6 +482,10 @@ class PolicyEngine:
         # Rule 2: Payment failure -> Payment help (0 discount)
         if root_cause == "PAYMENT_FAILURE":
             return self._action_payment_help(risk, diagnosis)
+
+        # Rule 2.5: Comparison Shopping -> Value reassurance
+        if root_cause == "COMPARISON_SHOPPING":
+            return self._action_value_reassurance(risk, diagnosis)
 
         # Rule 3: Price shopping with high value -> Value reassurance
         if root_cause in ["PRICE_SHOPPING", "PRICE_SENSITIVITY"] and risk_score < 0.7:
@@ -790,6 +839,14 @@ class OrchestratorAgent:
 
         # Step 2: Assess risk
         risk_result = await self.risk_agent.assess(session_data, signals)
+        
+        # Elevate risk to HIGH if they have multiple similar items with different prices (comparison shopping)
+        if check_cart_comparison_pattern(session_data):
+            risk_result["risk_score"] = 0.78
+            risk_result["risk_level"] = "HIGH"
+            risk_result["reason"] = "COMPARISON_SHOPPING_DETECTED"
+            risk_result["evidence"] = risk_result.get("evidence", []) + ["Multiple similar products with different prices in cart"]
+
         conversation.messages.append(AgentMessage("RiskAgent", risk_result, risk_result["latency_ms"]))
         total_cost += risk_result.get("cost_inr", 0)
 
