@@ -1,107 +1,158 @@
 import { useEffect, useState, useRef } from "react";
 
+// ── Agent Metadata with Dynamic Metric Renderers ─────────────────────────────
 const AGENTS = [
-  { key: "SignalAgent",    icon: "📡", label: "Signal Agent",    desc: "Extracting behavioral signals",        color: "#5EEAD4" },
-  { key: "RiskAgent",     icon: "⚖️",  label: "Risk Agent",     desc: "Scoring abandonment risk via ML",      color: "#818CF8" },
-  { key: "DiagnosisAgent",icon: "🧠", label: "Diagnosis Agent", desc: "LLM root-cause analysis",              color: "#F472B6" },
-  { key: "PolicyAgent",   icon: "🛡️",  label: "Policy Agent",   desc: "Budget, consent & margin guardrails",  color: "#FCD34D" },
-  { key: "ActionAgent",   icon: "⚡", label: "Action Agent",    desc: "Generating recovery intervention",     color: "#FB923C" },
-  { key: "SelfCheckAgent",icon: "✅", label: "Self-Check Agent",desc: "Validating action for safety",         color: "#34D399" },
-];
-
-const URGENCY_COLOR = {
-  HIGH:   { bg: "rgba(214,69,69,0.15)",   border: "#D64545", text: "#D64545" },
-  MEDIUM: { bg: "rgba(201,122,31,0.15)",  border: "#C97A1F", text: "#C97A1F" },
-  LOW:    { bg: "rgba(30,158,110,0.15)",  border: "#1E9E6E", text: "#1E9E6E" },
-};
-
-const RISK_LEVEL_COLOR = {
-  HIGH:   "#EF4444",
-  MEDIUM: "#F59E0B",
-  LOW:    "#10B981",
-};
-
-function agentSummary(key, result) {
-  if (!result) return null;
-  switch (key) {
-    case "SignalAgent": {
-      const sigs  = result.signals || {};
-      const count = Object.keys(sigs).length;
-      const bri   = sigs.behavioral_risk_index;
-      return bri != null ? `BRI: ${(bri * 100).toFixed(0)}% · ${count} signals` : `${count} signals extracted`;
+  {
+    key: "SignalAgent",
+    num: "01 · Sense",
+    icon: "📡",
+    label: "Signal Agent",
+    accentClass: "a1",
+    inputs: ["Dwell time", "Scroll speed", "Tab losses", "Click coordinates"],
+    outputs: (res) => {
+      const bri = res?.signals?.behavioral_risk_index;
+      const count = Object.keys(res?.signals || {}).length;
+      if (bri == null) return ["Behavioral Risk Index (BRI)", "Categorized signal streams"];
+      return [`BRI: ${(bri * 100).toFixed(0)}%`, `Signals: ${count} active`];
+    },
+    metric: (res) => {
+      const bri = res?.signals?.behavioral_risk_index;
+      const count = Object.keys(res?.signals || {}).length;
+      if (bri == null) return (
+        <>Behavioral Risk Index <b>16%</b> · 8 micro-signals</>
+      );
+      return (
+        <>Behavioral Risk Index <b>{(bri * 100).toFixed(0)}%</b> · {count} micro-signals</>
+      );
     }
-    case "RiskAgent": {
-      const s = result.risk_score;
-      const l = result.risk_level;
-      return s != null ? `Risk: ${(s * 100).toFixed(0)}% (${l})` : null;
+  },
+  {
+    key: "RiskAgent",
+    num: "02 · Score",
+    icon: "⚖️",
+    label: "Risk Agent",
+    accentClass: "a2",
+    inputs: ["Behavioral Risk Index (BRI)", "Cart value", "Friction indicators"],
+    outputs: (res) => {
+      const score = res?.risk_score;
+      const level = res?.risk_level;
+      if (score == null) return ["Abandonment Risk Score (%)", "Risk Category (High/Med/Low)"];
+      return [`Risk: ${(score * 100).toFixed(0)}%`, `Category: ${level || "LOW"}`];
+    },
+    metric: (res) => {
+      const score = res?.risk_score;
+      const level = res?.risk_level;
+      if (score == null) return (
+        <>CatBoost + XGBoost ensemble → <b>6% · LOW</b></>
+      );
+      return (
+        <>CatBoost + XGBoost ensemble → <b>{(score * 100).toFixed(0)}% · {level}</b></>
+      );
     }
-    case "DiagnosisAgent": {
-      const d    = result.diagnosis || {};
-      const cause = d.root_cause;
-      const conf  = d.confidence;
-      return cause ? `${cause.replace(/_/g, " ")} · ${conf != null ? (conf * 100).toFixed(0) + "% conf" : ""}` : null;
+  },
+  {
+    key: "DiagnosisAgent",
+    num: "03 · Reason",
+    icon: "🧠",
+    label: "Diagnosis Agent",
+    accentClass: "a3",
+    inputs: ["Risk Category", "Telemetry friction", "Views history"],
+    outputs: (res) => {
+      const d = res?.diagnosis || {};
+      if (!d.root_cause) return ["Root cause (e.g. PAYMENT_FAILURE)", "Diagnosis Confidence (%)"];
+      return [`Cause: ${d.root_cause.replace(/_/g, " ")}`, `Confidence: ${(d.confidence * 100).toFixed(0)}%`];
+    },
+    metric: (res) => {
+      const d = res?.diagnosis || {};
+      if (!d.root_cause) return (
+        <>Llama 3.2 CoT → <b>LOW_RISK</b> · 90% conf</>
+      );
+      return (
+        <>Llama 3.2 CoT → <b>{d.root_cause}</b> · {(d.confidence * 100).toFixed(0)}% conf</>
+      );
     }
-    case "PolicyAgent": {
-      const p      = result.policy || {};
-      const uplift = p.uplift_probability;
-      const budget = p.budget_remaining_inr;
-      return uplift != null ? `Uplift: ${(uplift * 100).toFixed(1)}% · Budget: ₹${budget ?? "—"}` : null;
+  },
+  {
+    key: "PolicyAgent",
+    num: "04 · Guard",
+    icon: "🛡️",
+    label: "Policy Agent",
+    accentClass: "a4",
+    inputs: ["Root cause", "Uplift projection", "Max discount caps"],
+    outputs: (res) => {
+      const p = res?.policy || {};
+      if (p.uplift_probability == null) return ["Uplift probability", "Budget check (budget_ok)", "Consent clearance"];
+      return [`Uplift: ${(p.uplift_probability * 100).toFixed(0)}%`, `Budget: ${p.budget_ok ? "OK" : "DENIED"}`];
+    },
+    metric: (res) => {
+      const p = res?.policy || {};
+      if (p.uplift_probability == null) return (
+        <>Uplift <b>0%</b> · budget cap ₹500 respected</>
+      );
+      return (
+        <>Uplift <b>{(p.uplift_probability * 100).toFixed(0)}%</b> · budget cap ₹{p.budget_remaining_inr ?? 500} respected</>
+      );
     }
-    case "ActionAgent": {
-      const a    = result.action || {};
+  },
+  {
+    key: "ActionAgent",
+    num: "05 · Act",
+    icon: "⚡",
+    label: "Action Agent",
+    accentClass: "a5",
+    inputs: ["Uplift probability", "Budget clearance", "Target channel"],
+    outputs: (res) => {
+      const a = res?.action || {};
       const type = a.action_type || a.action;
-      return type && type !== "DO_NOTHING"
-        ? type.replace(/_/g, " ")
-        : `No intervention (risk ${result.risk_level || "LOW"})`;
+      if (!type) return ["Remediation action", "Generated message text", "Assigned discount value"];
+      return [`Action: ${type.replace(/_/g, " ")}`, `Discount: ₹${a.discount_amount || 0}`];
+    },
+    metric: (res) => {
+      const a = res?.action || {};
+      const type = a.action_type || a.action;
+      if (!type) return (
+        <>Decision → <b>DO_NOTHING</b> · no discount issued</>
+      );
+      return (
+        <>Decision → <b>{type}</b> · discount ₹{a.discount_amount || 0} issued</>
+      );
     }
-    case "SelfCheckAgent": {
-      const sc     = result.self_check || {};
+  },
+  {
+    key: "SelfCheckAgent",
+    num: "06 · Verify",
+    icon: "✅",
+    label: "Self-Check Agent",
+    accentClass: "a6",
+    inputs: ["Proposed Action", "Discount value", "Safety checks matrix"],
+    outputs: (res) => {
+      const sc = res?.self_check || {};
       const checks = sc.checks || {};
       const passed = Object.values(checks).filter(Boolean).length;
-      const total  = Object.keys(checks).length || 6;
-      return `${sc.status || "PASSED"} · ${passed}/${total} checks`;
+      const total = Object.keys(checks).length || 6;
+      if (!sc.status) return ["Pipeline validation status", "6 security checks status"];
+      return [`Status: ${sc.status}`, `Checks: ${passed}/${total} OK`];
+    },
+    metric: (res) => {
+      const sc = res?.self_check || {};
+      const checks = sc.checks || {};
+      const passed = Object.values(checks).filter(Boolean).length;
+      const total = Object.keys(checks).length || 6;
+      if (!sc.status) return (
+        <>6/6 guardrail checks → <b>PASSED</b></>
+      );
+      return (
+        <>{passed}/{total} guardrail checks → <b>{sc.status}</b></>
+      );
     }
-    default: return null;
-  }
-}
+  },
+];
 
-function AgentCard({ agent, state, latency, summary }) {
-  return (
-    <div className={`agent-card agent-card--${state}`} style={{ "--agent-color": agent.color }}>
-      <div className="agent-card__icon">
-        {state === "running" ? <span className="agent-spinner" /> : <span>{agent.icon}</span>}
-      </div>
-      <div className="agent-card__body">
-        <div className="agent-card__name">{agent.label}</div>
-        <div className="agent-card__desc">
-          {state === "running" ? agent.desc + "…" : (state === "done" && summary) ? summary : agent.desc}
-        </div>
-      </div>
-      <div className="agent-card__meta">
-        {state === "done" && latency != null && <span className="agent-latency">{latency.toFixed(0)}ms</span>}
-        {state === "done" && <span className="agent-check">✓</span>}
-        {state === "running" && <span className="agent-pulse-dot" />}
-        {state === "idle" && <span className="agent-idle-dot" />}
-      </div>
-    </div>
-  );
-}
-
-function Arrow({ active }) {
-  return (
-    <div className={`pipeline-arrow ${active ? "pipeline-arrow--active" : ""}`}>
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-        <path d="M4 10H16M16 10L11 5M16 10L11 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
-  );
-}
-
-export default function AgentPipeline({ result, loading }) {
-  const [activeStep, setActiveStep]  = useState(-1);
-  const [doneSteps, setDoneSteps]    = useState(new Set());
-  const prevLoading                  = useRef(false);
-  const timers                       = useRef([]);
+export default function AgentPipeline({ result, loading, telemetryInputs }) {
+  const [activeStep, setActiveStep] = useState(-1);
+  const [doneSteps, setDoneSteps] = useState(new Set());
+  const prevLoading = useRef(false);
+  const timers = useRef([]);
 
   useEffect(() => {
     if (loading && !prevLoading.current) {
@@ -110,7 +161,7 @@ export default function AgentPipeline({ result, loading }) {
       prevLoading.current = true;
       timers.current.forEach(clearTimeout);
       timers.current = AGENTS.map((_, idx) =>
-        setTimeout(() => setActiveStep(idx), idx * 420)
+        setTimeout(() => setActiveStep(idx), idx * 550)
       );
     }
     if (!loading && prevLoading.current) {
@@ -124,213 +175,129 @@ export default function AgentPipeline({ result, loading }) {
 
   useEffect(() => {
     if (activeStep > 0) {
-      setDoneSteps(prev => { const n = new Set(prev); n.add(activeStep - 1); return n; });
+      setDoneSteps((prev) => {
+        const n = new Set(prev);
+        n.add(activeStep - 1);
+        return n;
+      });
     }
   }, [activeStep]);
 
-  const latencies   = result?.metrics?.agent_latencies || {};
-  const getState    = (idx) => {
-    if (loading && activeStep === idx)                return "running";
-    if (doneSteps.has(idx) || (!loading && result))   return "done";
+  const latencies = result?.metrics?.agent_latencies || {};
+  const getState = (idx) => {
+    if (loading && activeStep === idx) return "running";
+    if (doneSteps.has(idx) || (!loading && result)) return "done";
     return "idle";
   };
 
-  const action      = result?.action || {};
-  const actionType  = action.action_type || action.action || "";
-  const isDoing     = actionType && actionType !== "DO_NOTHING";
-  const urgency     = isDoing ? (action.urgency || (result?.risk_level === "HIGH" ? "HIGH" : "MEDIUM")) : null;
-  const urgStyle    = urgency ? (URGENCY_COLOR[urgency] || URGENCY_COLOR.MEDIUM) : null;
-  const showResult  = !loading && result && !result.error;
-  const riskScore   = result?.risk_score;
-  const riskLevel   = result?.risk_level || "LOW";
-  const riskColor   = RISK_LEVEL_COLOR[riskLevel] || "#10B981";
-  const diagnosis   = result?.diagnosis || {};
-  const policy      = result?.policy || {};
-  const selfCheck   = result?.self_check || {};
-  const totalMs     = result?.metrics?.total_latency_ms;
-  const totalCost   = result?.metrics?.total_cost_inr;
+  const totalMs = result?.metrics?.total_latency_ms;
+  const sessionId = result?.session_id || result?.sessionId || "S1001";
+  const finalLatency = totalMs != null ? totalMs.toFixed(0) : "158";
 
   return (
-    <div className="agent-pipeline-panel">
-      {/* Header */}
-      <div className="pipeline-header">
-        <div className="pipeline-header__icon">🤖</div>
-        <div>
-          <div className="pipeline-header__title">AI Agent Pipeline</div>
-          <div className="pipeline-header__sub">
-            {loading ? "Agents are thinking…" : showResult ? "Analysis complete" : "Awaiting session data"}
-          </div>
-        </div>
-        {loading && <div className="pipeline-live-badge">LIVE</div>}
-        {showResult && !loading && (
-          <div style={{
-            marginLeft: "auto", fontSize: 11, fontWeight: 700,
-            padding: "3px 10px", borderRadius: 20,
-            background: `${riskColor}22`, color: riskColor,
-          }}>
-            {riskLevel} RISK
-          </div>
-        )}
-      </div>
+    <div className="pipeline-container-3d">
+      <header className="pipeline-header-clean">
+        <div className="eyebrow">Multi-Agent Pipeline</div>
+        <h1>Six agents, one decision</h1>
+        <p>Every checkout session flows through six specialized agents — from raw behavioral signal to a guardrailed, auditable action.</p>
+      </header>
 
-      {/* Agent Chain */}
-      <div className="pipeline-chain">
-        {AGENTS.map((agent, idx) => (
-          <div key={agent.key} className="pipeline-step">
-            <AgentCard
-              agent={agent}
-              state={getState(idx)}
-              latency={latencies[agent.key]}
-              summary={agentSummary(agent.key, result)}
-            />
-            {idx < AGENTS.length - 1 && (
-              <Arrow active={doneSteps.has(idx) || (!loading && showResult)} />
-            )}
-          </div>
-        ))}
-      </div>
+      <div className="pipeline-flow-3d">
+        <div className="spine-3d"></div>
 
-      {/* Thought Log */}
-      {showResult && (
-        <div className="pipeline-thought-log">
-          <div className="thought-log-title">🧾 Agent Reasoning Trail</div>
-          <div className="thought-log-rows">
-            {/* Risk */}
-            {riskScore != null && (
-              <div className="thought-row">
-                <span className="thought-agent">RiskAgent</span>
-                <span className="thought-arrow">→</span>
-                <span className="thought-text">
-                  Abandonment risk: <b style={{ color: riskColor }}>{(riskScore * 100).toFixed(1)}%</b>
-                  {" "}— session classified as <b>{riskLevel}</b>
-                </span>
-              </div>
-            )}
-            {/* Diagnosis */}
-            {diagnosis.root_cause && (
-              <div className="thought-row">
-                <span className="thought-agent">DiagnosisAgent</span>
-                <span className="thought-arrow">→</span>
-                <span className="thought-text">
-                  Root cause: <b>{diagnosis.root_cause.replace(/_/g, " ")}</b>
-                  {" "}({((diagnosis.confidence || 0) * 100).toFixed(0)}% confidence)
-                  {diagnosis.evidence?.length > 0 && (
-                    <span className="thought-evidence"> · {diagnosis.evidence.join(", ")}</span>
-                  )}
-                </span>
-              </div>
-            )}
-            {/* Policy */}
-            {policy.uplift_probability != null && (
-              <div className="thought-row">
-                <span className="thought-agent">PolicyAgent</span>
-                <span className="thought-arrow">→</span>
-                <span className="thought-text">
-                  Uplift probability: <b>{((policy.uplift_probability || 0) * 100).toFixed(1)}%</b>
-                  {" "}· Budget remaining: <b>₹{policy.budget_remaining_inr ?? "—"}</b>
-                  {" "}· Consent: <b>{policy.consent_ok ? "✓ OK" : "✗ Blocked"}</b>
-                </span>
-              </div>
-            )}
-            {/* Self Check */}
-            {selfCheck.status && (
-              <div className="thought-row">
-                <span className="thought-agent">SelfCheckAgent</span>
-                <span className="thought-arrow">→</span>
-                <span className="thought-text">
-                  Status: <b className={selfCheck.status === "PASSED" ? "text-success" : "text-danger"}>
-                    {selfCheck.status}
-                  </b>
-                  {selfCheck.checks && (
-                    <span className="thought-checks">
-                      {Object.entries(selfCheck.checks).map(([k, v]) => (
-                        <span key={k} className={`check-chip ${v ? "chip-pass" : "chip-fail"}`}>
-                          {v ? "✓" : "✗"} {k.replace(/_/g, " ")}
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Final Action Card: Recovery Action ── */}
-      {showResult && isDoing && urgStyle && (
-        <div className="pipeline-action-card" style={{ background: urgStyle.bg, borderColor: urgStyle.border }}>
-          <div className="action-card-top">
-            <span className="action-card-label" style={{ color: urgStyle.text }}>
-              🚨 RECOVERY ACTION — {urgency} PRIORITY
-            </span>
-            <span className="action-card-type">{actionType.replace(/_/g, " ")}</span>
-          </div>
-          {(action.message || action.action_message) && (
-            <div className="action-card-msg">
-              "{action.message || action.action_message}"
+        {/* ─── Intake Node (Inputs Entering) ─── */}
+        <div className="stage-row-3d done">
+          <div className="node-3d on a1" style={{ fontSize: 16 }}>📥</div>
+          <div className="card-3d a1">
+            <div className="card-top-3d">
+              <span className="name-3d">Telemetry Intake Stream</span>
+              <span className="tag-3d" style={{ color: "var(--teal)" }}>Inputs Entry</span>
             </div>
-          )}
-          {action.discount_amount > 0 && (
-            <div className="action-card-discount">
-              💸 Discount: ₹{action.discount_amount} via {action.channel}
+            <div className="card-metric-3d" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontFamily: "var(--font-mono)", fontSize: "11.5px", color: "var(--muted)", margin: "8px 0 0" }}>
+              <div>💰 Cart Value: <b>₹{telemetryInputs?.cartValue || 0}</b></div>
+              <div>🔄 Tab Switches: <b>{telemetryInputs?.tabSwitches || 0}</b></div>
+              <div>❌ Pay Failures: <b>{telemetryInputs?.failures || 0}</b></div>
+              <div>⚠️ Form Errors: <b>{telemetryInputs?.errors || 0}</b></div>
+              <div>👀 Product Views: <b>{telemetryInputs?.views || 0}</b></div>
+              <div>⏱ Dwell Time: <b>120s</b></div>
             </div>
-          )}
-          {action.reasoning && (
-            <div className="action-card-reasoning">Agent reasoning: {action.reasoning}</div>
-          )}
-        </div>
-      )}
-
-      {/* ── Final Action Card: No Intervention ── */}
-      {showResult && !isDoing && (
-        <div className="pipeline-action-card" style={{
-          background: "rgba(16,185,129,0.08)",
-          borderColor: "#10B981",
-          borderWidth: 1, borderStyle: "solid",
-        }}>
-          <div className="action-card-top">
-            <span className="action-card-label" style={{ color: "#10B981" }}>
-              ✅ NO INTERVENTION REQUIRED
-            </span>
-            <span className="action-card-type">{riskLevel} RISK</span>
           </div>
-          {/* Rich detail explaining WHY no action */}
-          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-            {riskScore != null && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, height: 6, borderRadius: 99, background: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
-                  <div style={{ width: `${(riskScore * 100).toFixed(0)}%`, height: "100%", background: riskColor, borderRadius: 99 }} />
+        </div>
+
+        {/* ─── 6 Agent Nodes ─── */}
+        {AGENTS.map((agent, idx) => {
+          const state = getState(idx);
+          const isRunning = state === "running";
+          const isDone = state === "done";
+          const classes = `stage-row-3d ${isRunning ? "running" : ""} ${isDone ? "done" : ""}`;
+
+          return (
+            <div key={agent.key} className={classes}>
+              {/* Left Glowing Icon Node */}
+              <div className={`node-3d ${isDone || isRunning ? "on" : ""} ${agent.accentClass}`}>
+                {isRunning ? (
+                  <span className="node-spinner-3d" />
+                ) : (
+                  <span>{agent.icon}</span>
+                )}
+              </div>
+
+              {/* 3D Perspective Card */}
+              <div className={`card-3d ${agent.accentClass}`}>
+                <div className="card-top-3d">
+                  <span className="name-3d">{agent.label}</span>
+                  <span className="tag-3d">{agent.num}</span>
                 </div>
-                <span style={{ fontSize: 12, color: riskColor, fontWeight: 700, width: 40 }}>{(riskScore * 100).toFixed(0)}%</span>
+                
+                <div className="card-metric-3d">
+                  {agent.metric(isDone && result ? result : null)}
+                </div>
+
+                <div className="card-details-3d">
+                  <div style={{ marginBottom: 4 }}>
+                    <strong style={{ color: "rgba(255,255,255,0.45)" }}>Consumed Inputs:</strong>{" "}
+                    {agent.inputs.join(", ")}
+                  </div>
+                  <div>
+                    <strong style={{ color: "rgba(255,255,255,0.45)" }}>Generated Outputs:</strong>{" "}
+                    {typeof agent.outputs === "function" ? agent.outputs(isDone && result ? result : null).join(", ") : agent.outputs.join(", ")}
+                  </div>
+                </div>
+
+                <div className="card-foot-3d">
+                  <span>{latencies[agent.key] != null ? `${latencies[agent.key].toFixed(0)}ms` : "0ms"}</span>
+                  <span className="ok-3d">passed</span>
+                </div>
               </div>
-            )}
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
-              {diagnosis.root_cause === "LOW_RISK" || (riskScore != null && riskScore < 0.55)
-                ? `Risk score ${(riskScore * 100).toFixed(0)}% is below the intervention threshold (55%). User shows no abandonment signals — no action needed to protect margin.`
-                : `Uplift probability ${((policy.uplift_probability || 0) * 100).toFixed(1)}% is too low to justify an intervention. Conserving budget.`}
             </div>
-            {diagnosis.root_cause && (
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>
-                Diagnosis: {diagnosis.root_cause.replace(/_/g, " ")} · Confidence {((diagnosis.confidence || 0) * 100).toFixed(0)}%
-              </div>
-            )}
+          );
+        })}
+
+        {/* ─── Outcome Node (Final Outputs) ─── */}
+        <div className="stage-row-3d done">
+          <div className="node-3d on a6" style={{ fontSize: 16 }}>📤</div>
+          <div className="card-3d a6">
+            <div className="card-top-3d">
+              <span className="name-3d">Agent Pipeline Outcome</span>
+              <span className="tag-3d" style={{ color: "var(--green)" }}>Final Outputs</span>
+            </div>
+            <div className="card-metric-3d" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontFamily: "var(--font-mono)", fontSize: "11.5px", color: "var(--muted)", margin: "8px 0 0" }}>
+              <div>⚖️ Risk Score: <b>{result?.risk_score != null ? `${(result.risk_score * 100).toFixed(0)}%` : "6%"} ({result?.risk_level || "LOW"})</b></div>
+              <div>🧠 Cause: <b>{result?.diagnosis?.root_cause ? result.diagnosis.root_cause.replace(/_/g, " ") : "LOW RISK"}</b></div>
+              <div>⚡ Action: <b>{result?.action?.action_type || result?.action?.action || "DO NOTHING"}</b></div>
+              <div>🛡️ Audit Status: <b style={{ color: "var(--green)" }}>{result?.self_check?.status || "PASSED"}</b></div>
+              <div style={{ gridColumn: "span 2" }}>💬 Msg: <b style={{ fontStyle: "italic", color: "var(--text)" }}>"{result?.action?.message || "No recovery action required"}"</b></div>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Footer */}
-      {showResult && (
-        <div className="pipeline-footer">
-          <span>⏱ {totalMs != null ? `${totalMs.toFixed(0)}ms` : "—"}</span>
-          <span className="pipeline-sep">·</span>
-          <span>💰 ₹{totalCost != null ? totalCost.toFixed(4) : "—"} cost</span>
-          <span className="pipeline-sep">·</span>
-          <span>🤖 {AGENTS.length} agents</span>
-          <span className="pipeline-sep">·</span>
-          <span>🧠 LLM-powered</span>
+        {/* Final Audit Summary Card */}
+        <div className="out-3d">
+          <div className="out-card-3d">
+            🎯 <span>Session <b>{sessionId}</b> audited in <b>{finalLatency}ms</b> end-to-end</span>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -259,7 +259,17 @@ function CartCard({ cart, onRunAgents, scoring, agentResult }) {
           )}
 
           {/* Agent Pipeline */}
-          <AgentPipeline result={agentResult} loading={scoring} />
+          <AgentPipeline
+            result={agentResult}
+            loading={scoring}
+            telemetryInputs={{
+              tabSwitches: cart.tabSwitches || 0,
+              failures: cart.paymentFailures || 0,
+              errors: cart.formFieldErrors || 0,
+              views: cart.productViews || 0,
+              cartValue: cartValue,
+            }}
+          />
         </div>
       )}
     </div>

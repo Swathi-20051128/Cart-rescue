@@ -115,7 +115,17 @@ const ScoreSession = () => {
 
         {/* Agent Pipeline visualizer */}
         <div>
-          <AgentPipeline result={result} loading={loading} />
+          <AgentPipeline
+            result={result}
+            loading={loading}
+            telemetryInputs={{
+              tabSwitches: form.tab_switches || 0,
+              failures: form.payment_failures || 0,
+              errors: form.form_field_errors || 0,
+              views: form.product_views || 0,
+              cartValue: form.cart_value || 0,
+            }}
+          />
         </div>
       </div>
     </div>
