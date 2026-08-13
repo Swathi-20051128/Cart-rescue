@@ -101,18 +101,45 @@ export const getAllOrdersAdmin = async (req, res) => {
   res.json(orders);
 };
 
+let cachedToken = null;
+
+const getWppToken = async (baseUrl, session) => {
+  const envToken = process.env.WPPCONNECT_TOKEN;
+  if (envToken) return envToken;
+
+  if (cachedToken) return cachedToken;
+
+  const secretKey = "THISISMYSECURETOKEN"; // WPPConnect default secret key
+  try {
+    const resp = await fetch(`${baseUrl}/api/${session}/${secretKey}/generate-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.token) {
+        cachedToken = data.token;
+        return cachedToken;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to generate WPPConnect token:", err.message);
+  }
+  return "";
+};
+
 export const getWhatsAppStatus = async (req, res) => {
   const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
   const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
-  const wppToken = process.env.WPPCONNECT_TOKEN || "";
-
-  const headers = { "Content-Type": "application/json" };
-  if (wppToken) {
-    headers["Authorization"] = `Bearer ${wppToken}`;
-  }
 
   try {
     const baseUrl = wppUrl.replace(/\/+$/, "");
+    const token = await getWppToken(baseUrl, wppSession);
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const resp = await fetch(`${baseUrl}/api/${wppSession}/status-session`, { headers });
     
     if (resp.status === 404 || resp.status === 400) {
@@ -135,15 +162,15 @@ export const getWhatsAppStatus = async (req, res) => {
 export const startWhatsAppSession = async (req, res) => {
   const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
   const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
-  const wppToken = process.env.WPPCONNECT_TOKEN || "";
-
-  const headers = { "Content-Type": "application/json" };
-  if (wppToken) {
-    headers["Authorization"] = `Bearer ${wppToken}`;
-  }
 
   try {
     const baseUrl = wppUrl.replace(/\/+$/, "");
+    const token = await getWppToken(baseUrl, wppSession);
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const resp = await fetch(`${baseUrl}/api/${wppSession}/start-session`, {
       method: "POST",
       headers,
@@ -166,15 +193,15 @@ export const startWhatsAppSession = async (req, res) => {
 export const getWhatsAppQRCode = async (req, res) => {
   const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
   const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
-  const wppToken = process.env.WPPCONNECT_TOKEN || "";
-
-  const headers = {};
-  if (wppToken) {
-    headers["Authorization"] = `Bearer ${wppToken}`;
-  }
 
   try {
     const baseUrl = wppUrl.replace(/\/+$/, "");
+    const token = await getWppToken(baseUrl, wppSession);
+    const headers = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const resp = await fetch(`${baseUrl}/api/${wppSession}/qrcode-session`, { headers });
     
     const contentType = resp.headers.get("content-type") || "";
