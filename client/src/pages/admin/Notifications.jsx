@@ -56,6 +56,32 @@ export default function Notifications() {
   }, [activeTab]);
 
   useEffect(() => {
+    let interval = null;
+    const currentStatus = (wppStatus || "").toUpperCase();
+    const isPollingState = ["STARTING", "INITIALIZING", "NOT_LOGGED", "QRCODE", "PAIN_CONNECTING", "NOT_INITIALIZED"].includes(currentStatus);
+
+    if (activeTab === "whatsapp" && isPollingState) {
+      interval = setInterval(() => {
+        api.get("/admin/whatsapp-status")
+          .then((res) => {
+            const status = res.data.status || "DISCONNECTED";
+            setWppStatus(status);
+            if (res.data.qrcode) {
+              setWppQrCode(res.data.qrcode);
+            }
+          })
+          .catch((err) => {
+            console.error("WPPConnect polling error:", err);
+          });
+      }, 3000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeTab, wppStatus]);
+
+  useEffect(() => {
     setLoading(true);
     api.get("/admin/audit-log", { params: { limit: 100 } })
       .then((res) => {
