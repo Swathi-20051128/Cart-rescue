@@ -5,6 +5,9 @@ export default function Notifications() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("whatsapp"); // "whatsapp" | "mail" | "dashboard"
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterCause, setFilterCause] = useState("");
 
   // WPPConnect WhatsApp connection state
   const [wppStatus, setWppStatus] = useState("DISCONNECTED");
@@ -97,19 +100,49 @@ export default function Notifications() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter logs by channel
+  // Filter logs by channel, search term, date, and cause
   const filteredLogs = logs.filter((l) => {
+    // 1. Channel Filter
     const ch = (l.channel || "").toUpperCase();
+    let matchesChannel = false;
     if (activeTab === "whatsapp") {
-      return ch === "WHATSAPP" || ch === "SMS";
+      matchesChannel = ch === "WHATSAPP" || ch === "SMS";
+    } else if (activeTab === "mail") {
+      matchesChannel = ch === "EMAIL";
+    } else if (activeTab === "dashboard") {
+      matchesChannel = ch === "IN_APP" || ch === "DASHBOARD" || !l.channel;
     }
-    if (activeTab === "mail") {
-      return ch === "EMAIL";
+
+    if (!matchesChannel) return false;
+
+    // 2. Search Term Filter (Name, User ID, Session ID, Email)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const sessionMatches = (l.session_id || "").toLowerCase().includes(term);
+      const userMatches = (l.user_id || "").toLowerCase().includes(term);
+      const emailMatches = (l.full_result_json?.user_email || "").toLowerCase().includes(term);
+      const nameMatches = (l.full_result_json?.user_name || "").toLowerCase().includes(term);
+      if (!sessionMatches && !userMatches && !emailMatches && !nameMatches) {
+        return false;
+      }
     }
-    if (activeTab === "dashboard") {
-      return ch === "IN_APP" || ch === "DASHBOARD" || !l.channel;
+
+    // 3. Date Filter
+    if (filterDate) {
+      const logDateString = new Date(l.timestamp).toISOString().split("T")[0]; // YYYY-MM-DD
+      if (logDateString !== filterDate) {
+        return false;
+      }
     }
-    return false;
+
+    // 4. Root Cause Filter
+    if (filterCause) {
+      if ((l.root_cause || "").toUpperCase() !== filterCause.toUpperCase()) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
   return (
@@ -245,6 +278,71 @@ export default function Notifications() {
           )}
         </div>
       )}
+
+      {/* Filters Bar */}
+      <div style={{
+        display: "flex",
+        gap: 12,
+        marginBottom: 20,
+        padding: 14,
+        background: "var(--panel)",
+        border: "1px solid var(--border)",
+        borderRadius: 12,
+        alignItems: "center",
+        flexWrap: "wrap"
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 200 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 4 }}>Search Recipients</label>
+          <input
+            type="text"
+            placeholder="Search by name, email, session ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", width: 160 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 4 }}>Filter by Date</label>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            style={{ padding: "7.5px 12px", fontSize: 12.5, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)" }}
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", width: 180 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 4 }}>Root Cause</label>
+          <select
+            value={filterCause}
+            onChange={(e) => setFilterCause(e.target.value)}
+            style={{ padding: "8px 12px", fontSize: 12.5, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--text)" }}
+          >
+            <option value="">All Root Causes</option>
+            <option value="PAYMENT_FAILURE">Payment Failure</option>
+            <option value="PRICE_SENSITIVITY">Price Sensitivity</option>
+            <option value="COMPARISON_SHOPPING">Comparison Shopping</option>
+            <option value="CHECKOUT_FRICTION">Checkout Friction</option>
+            <option value="LOW_INTENT">Low Intent</option>
+            <option value="MIXED_SIGNALS">Mixed Signals</option>
+          </select>
+        </div>
+
+        {(searchTerm || filterDate || filterCause) && (
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setFilterDate("");
+              setFilterCause("");
+            }}
+            className="secondary"
+            style={{ alignSelf: "flex-end", padding: "8px 16px", fontSize: 12, height: 35, width: "auto" }}
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>

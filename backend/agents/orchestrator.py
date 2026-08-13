@@ -132,13 +132,13 @@ class LLMClient:
             action_map = {
                 "PAYMENT_FAILURE": {
                     "action_type": "ALTERNATE_PAYMENT_GUIDANCE", "channel": "IN_APP",
-                    "message": "Having trouble paying? Try UPI, netbanking, or COD — all available for your order!",
+                    "message": "Having trouble paying? Try alternate payment methods or select Cash on Delivery to place your order successfully!",
                     "discount_amount": 0, "discount_type": "NONE", "urgency": "HIGH",
                     "reasoning": "Rule-based fallback: payment failure detected.",
                 },
                 "COMPARISON_SHOPPING": {
                     "action_type": "SOCIAL_PROOF_NUDGE", "channel": "IN_APP",
-                    "message": "Best price guaranteed! Plus 2-day delivery & free returns on this item.",
+                    "message": "We noticed you are comparing items! Here is a comparison helper: get the best value, free 30-day returns, and instant price match.",
                     "discount_amount": 0, "discount_type": "NONE", "urgency": "MEDIUM",
                     "reasoning": "Rule-based fallback: comparison shopping detected.",
                 },
@@ -469,7 +469,7 @@ class PolicyEngine:
         return {
             "action": "ALTERNATE_PAYMENT",
             "action_type": "ALTERNATE_PAYMENT_GUIDANCE",
-            "action_message": "Having trouble paying? Try UPI, Netbanking, or Cash on Delivery.",
+            "action_message": "Having trouble paying? Try alternate payment methods or select Cash on Delivery to place your order successfully!",
             "discount": 0.0,
             "discount_amount": 0.0,
             "channel": "IN_APP",
@@ -481,7 +481,7 @@ class PolicyEngine:
         return {
             "action": "VALUE_REASSURANCE",
             "action_type": "SOCIAL_PROOF_NUDGE",
-            "action_message": "Best price guaranteed! Free 30-day returns and authentic items.",
+            "action_message": "We noticed you are comparing items! Here is a comparison helper: get the best value, free 30-day returns, and instant price match.",
             "discount": 0.0,
             "discount_amount": 0.0,
             "channel": "IN_APP",
@@ -617,7 +617,7 @@ Respond in JSON:
             "PAYMENT_FAILURE": {
                 "action_type": "ALTERNATE_PAYMENT_GUIDANCE",
                 "channel": "IN_APP",
-                "message": "Having trouble paying? Try UPI, netbanking, or COD — all available for your order!",
+                "message": "Having trouble paying? Try alternate payment methods or select Cash on Delivery to place your order successfully!",
                 "discount_amount": 0,
                 "discount_type": "NONE",
                 "urgency": "HIGH",
@@ -625,7 +625,7 @@ Respond in JSON:
             "COMPARISON_SHOPPING": {
                 "action_type": "SOCIAL_PROOF_NUDGE",
                 "channel": "IN_APP",
-                "message": f"⭐ 2,847 customers bought this today. Limited stock remaining!",
+                "message": "We noticed you are comparing items! Here is a comparison helper: get the best value, free 30-day returns, and instant price match.",
                 "discount_amount": 0,
                 "discount_type": "NONE",
                 "urgency": "MEDIUM",
