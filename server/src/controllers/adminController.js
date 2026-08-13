@@ -102,7 +102,7 @@ export const getAllOrdersAdmin = async (req, res) => {
 };
 
 export const getWhatsAppStatus = async (req, res) => {
-  const wppUrl = process.env.WPPCONNECT_API_URL || "http://localhost:21465";
+  const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
   const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
   const wppToken = process.env.WPPCONNECT_TOKEN || "";
 
@@ -114,15 +114,26 @@ export const getWhatsAppStatus = async (req, res) => {
   try {
     const baseUrl = wppUrl.replace(/\/+$/, "");
     const resp = await fetch(`${baseUrl}/api/${wppSession}/status-session`, { headers });
-    const data = await resp.json();
-    res.json(data);
+    
+    if (resp.status === 404 || resp.status === 400) {
+      return res.json({ status: "DISCONNECTED", message: "Session not started yet" });
+    }
+
+    const contentType = resp.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await resp.json();
+      res.json(data);
+    } else {
+      const text = await resp.text();
+      res.json({ status: "DISCONNECTED", message: text });
+    }
   } catch (err) {
     res.status(502).json({ message: "WPPConnect server offline", error: err.message });
   }
 };
 
 export const startWhatsAppSession = async (req, res) => {
-  const wppUrl = process.env.WPPCONNECT_API_URL || "http://localhost:21465";
+  const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
   const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
   const wppToken = process.env.WPPCONNECT_TOKEN || "";
 
@@ -137,8 +148,15 @@ export const startWhatsAppSession = async (req, res) => {
       method: "POST",
       headers
     });
-    const data = await resp.json();
-    res.json(data);
+    
+    const contentType = resp.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await resp.json();
+      res.json(data);
+    } else {
+      const text = await resp.text();
+      res.json({ status: "STARTING", message: text });
+    }
   } catch (err) {
     res.status(502).json({ message: "WPPConnect server offline", error: err.message });
   }
