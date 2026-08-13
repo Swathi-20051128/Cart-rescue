@@ -90,43 +90,41 @@ const ScoreSession = () => {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "24px", alignItems: "start" }}>
-        {/* Form */}
-        <div>
-          <form className="score-form" onSubmit={submit}>
-            {Object.keys(defaultForm).map((key) => (
-              <label key={key}>
-                {key.replaceAll("_", " ")}
-                <input
-                  type={key === "session_id" ? "text" : "number"}
-                  value={form[key]}
-                  onChange={(e) =>
-                    set(key, key === "session_id" ? e.target.value : Number(e.target.value))
-                  }
-                />
-              </label>
-            ))}
-            <button type="submit" disabled={loading}>
-              {loading ? "🤖 Agents thinking…" : "▶ Run Agent Pipeline"}
-            </button>
-          </form>
-          {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
-        </div>
+      {/* Form */}
+      <div>
+        <form className="score-form" onSubmit={submit}>
+          {Object.keys(defaultForm).map((key) => (
+            <label key={key}>
+              {key.replaceAll("_", " ")}
+              <input
+                type={key === "session_id" ? "text" : "number"}
+                value={form[key]}
+                onChange={(e) =>
+                  set(key, key === "session_id" ? e.target.value : Number(e.target.value))
+                }
+              />
+            </label>
+          ))}
+          <button type="submit" disabled={loading}>
+            {loading ? "🤖 Agents thinking…" : "▶ Run Agent Pipeline"}
+          </button>
+        </form>
+        {error && <p className="error" style={{ marginTop: 8, marginBottom: 16 }}>{error}</p>}
+      </div>
 
-        {/* Agent Pipeline visualizer */}
-        <div>
-          <AgentPipeline
-            result={result}
-            loading={loading}
-            telemetryInputs={{
-              tabSwitches: form.tab_switches || 0,
-              failures: form.payment_failures || 0,
-              errors: form.form_field_errors || 0,
-              views: form.product_views || 0,
-              cartValue: form.cart_value || 0,
-            }}
-          />
-        </div>
+      {/* Agent Pipeline visualizer */}
+      <div style={{ marginTop: "24px" }}>
+        <AgentPipeline
+          result={result}
+          loading={loading}
+          telemetryInputs={{
+            tabSwitches: form.tab_switches || 0,
+            failures: form.payment_failures || 0,
+            errors: form.form_field_errors || 0,
+            views: form.product_views || 0,
+            cartValue: form.cart_value || 0,
+          }}
+        />
       </div>
     </div>
   );

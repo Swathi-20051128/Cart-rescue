@@ -126,6 +126,11 @@ function StepDetails({ data, onChange, onNext }) {
     if (!data.address.trim()) e.address = "Address is required";
     if (!data.city.trim())    e.city    = "City is required";
     if (!data.pincode.trim()) e.pincode = "Pincode is required";
+
+    if (Object.keys(e).length > 0) {
+      api.post("/cart/signal", { signal: "form_error" }).catch(() => {});
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -203,6 +208,11 @@ function StepPayment({ selected, onSelect, upiId, onUpiChange, cardNo, onCardCha
     if (!selected) { e.method = "Please select a payment method"; }
     if (selected === "upi" && !upiId.trim()) e.upi = "Enter your UPI ID";
     if (selected === "card" && cardNo.replace(/\s/g, "").length < 16) e.card = "Enter a valid 16-digit card number";
+
+    if (Object.keys(e).length > 0) {
+      api.post("/cart/signal", { signal: "payment_failure" }).catch(() => {});
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -297,7 +307,7 @@ function StepPayment({ selected, onSelect, upiId, onUpiChange, cardNo, onCardCha
 }
 
 // ─── Step 3: Confirmation ─────────────────────────────────────────────────────
-function StepConfirmation({ cart, details, paymentMethod, onBack, onPlace, placing }) {
+function StepConfirmation({ cart, details, paymentMethod, onBack, onPlace, placing, payError }) {
   const subtotal = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
   const shipping = subtotal >= 999 ? 0 : 79;
   const total    = subtotal + shipping;
@@ -354,6 +364,23 @@ function StepConfirmation({ cart, details, paymentMethod, onBack, onPlace, placi
         </div>
       </div>
 
+      {payError && (
+        <div style={{
+          background: "rgba(239, 68, 68, 0.08)",
+          border: "1.5px solid #EF4444",
+          color: "#EF4444",
+          padding: "12px 16px",
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}>
+          ❌ {payError}
+        </div>
+      )}
+
       {/* Place order */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button onClick={onBack} disabled={placing} style={{ fontSize: 13, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-body)" }}>← Back</button>
@@ -404,6 +431,7 @@ export default function Checkout() {
   const [cart, setCart]       = useState(null);
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [payError, setPayError] = useState("");
 
   const [details, setDetails] = useState({ name: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" });
   const [payment, setPayment] = useState({ method: "", upiId: "", cardNo: "" });
@@ -411,16 +439,51 @@ export default function Checkout() {
   useEffect(() => { api.get("/cart").then(r => setCart(r.data)); }, []);
 
   const updateDetail  = (k, v) => setDetails(d => ({ ...d, [k]: v }));
-  const updatePayment = (k, v) => setPayment(p => ({ ...p, [k]: v }));
+  const updatePayment = (k, v) => {
+    setPayment(p => ({ ...p, [k]: v }));
+    setPayError(""); // Clear any payment error when payment details change
+  };
 
   const placeOrder = async () => {
     setPlacing(true);
+    setPayError("");
+
+    if (payment.method !== "cod") {
+      try {
+        // Send a telemetry signal for payment failure
+        await api.post("/cart/signal", { signal: "payment_failure" });
+      } catch (err) {
+        console.error("Signal tracking failed", err);
+      }
+
+      // Select appropriate error message
+      let msg = "Payment failed. Please verify your details.";
+      if (payment.method === "upi") {
+        msg = `Incorrect UPI ID: "${payment.upiId || "unknown"}". Please verify your VPA or try Cash on Delivery.`;
+      } else if (payment.method === "card") {
+        msg = `Invalid credit card details: "Ending in ${payment.cardNo ? payment.cardNo.replace(/\s/g, "").slice(-4) : "xxxx"}". Transaction declined by bank.`;
+      } else if (payment.method === "netbank") {
+        msg = "Net banking authentication failed: Bad credentials or connection timeout.";
+      } else if (payment.method === "wallet") {
+        msg = "Wallet checkout declined: Insufficient funds. Please choose another method.";
+      } else if (payment.method === "emi") {
+        msg = "EMI transaction declined: Insufficient credit limit on card.";
+      }
+
+      setPayError(msg);
+      setPlacing(false);
+      return;
+    }
+
     try {
       await api.post("/orders");
       updateCartState(null); // Clear the cart items count badge on navbar
       setSuccess(true);
-    } catch { alert("Order placement failed. Please try again."); }
-    finally { setPlacing(false); }
+    } catch {
+      setPayError("Order placement failed. Please try again.");
+    } finally {
+      setPlacing(false);
+    }
   };
 
   if (success) return (
@@ -466,9 +529,13 @@ export default function Checkout() {
               cart={cart}
               details={details}
               paymentMethod={payment.method}
-              onBack={() => setStep(1)}
+              onBack={() => {
+                setPayError("");
+                setStep(1);
+              }}
               onPlace={placeOrder}
               placing={placing}
+              payError={payError}
             />
           )}
           {step === 2 && !cart && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}

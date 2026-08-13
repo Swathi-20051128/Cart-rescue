@@ -51,21 +51,7 @@ const Register = () => {
             <input type="email" placeholder="name@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             <label className="field-label">Password</label>
             <input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-            <label className="role-select">
-              <input
-                type="checkbox"
-                checked={form.role === "admin"}
-                onChange={(e) => setForm({ ...form, role: e.target.checked ? "admin" : "user" })}
-              />
-              Register as admin
-            </label>
-            {form.role === "admin" && (
-              <input
-                placeholder="Admin signup key"
-                value={form.adminKey}
-                onChange={(e) => setForm({ ...form, adminKey: e.target.value })}
-              />
-            )}
+
             <button type="submit">Create account</button>
           </form>
           <p>Have an account? <Link to="/login">Login</Link></p>

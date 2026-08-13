@@ -21,10 +21,11 @@ class NotificationService:
     def reload_config(self):
         """Reload configuration from environment variables."""
         self.sendgrid_key = os.getenv("SENDGRID_API_KEY", "")
+        self.resend_key = os.getenv("RESEND_API_KEY", "")
         self.twilio_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
         self.twilio_token = os.getenv("TWILIO_AUTH_TOKEN", "")
         self.twilio_from = os.getenv("TWILIO_FROM_NUMBER", "")
-        self.from_email = os.getenv("FROM_EMAIL", "noreply@cartguard.ai")
+        self.from_email = "onboarding@resend.dev"
 
     async def send_notification(self, session_data: Dict[str, Any], action: Dict[str, Any]):
         """Send notification based on action channel and available user contacts."""
@@ -106,8 +107,8 @@ class NotificationService:
         message: str,
         discount: float = 0,
     ) -> Dict[str, Any]:
-        """Send cart recovery email via SendGrid."""
-        if not self.sendgrid_key or not to_email:
+        """Send cart recovery email via Resend."""
+        if not self.resend_key or not to_email:
             safe_subj = subject.encode('ascii', 'replace').decode('ascii')
             safe_msg = message.encode('ascii', 'replace').decode('ascii')
             print(f"[EMAIL MOCK] To: {to_email} | Subject: {safe_subj} | Message: {safe_msg}")
@@ -138,21 +139,26 @@ class NotificationService:
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://api.sendgrid.com/v3/mail/send",
+                    "https://api.resend.com/emails",
                     headers={
-                        "Authorization": f"Bearer {self.sendgrid_key}",
+                        "Authorization": f"Bearer {self.resend_key}",
                         "Content-Type": "application/json",
                     },
                     json={
-                        "personalizations": [{"to": [{"email": to_email}]}],
-                        "from": {"email": self.from_email, "name": "CartGuard AI"},
+                        "from": "CartGuard AI <onboarding@resend.dev>",
+                        "to": [to_email],
                         "subject": subject,
-                        "content": [{"type": "text/html", "value": html_content}],
+                        "html": html_content,
                     },
                     timeout=10.0,
                 )
-                print(f"[EMAIL SENT] Status {response.status_code} to {to_email}")
-                return {"status": "sent", "channel": "email", "status_code": response.status_code}
+                print(f"[EMAIL SENT] Status {response.status_code} to {to_email} | Response: {response.text}")
+                return {
+                    "status": "sent" if response.status_code == 200 else "failed",
+                    "channel": "email",
+                    "status_code": response.status_code,
+                    "response": response.text
+                }
         except Exception as e:
             print(f"[EMAIL ERROR] {str(e)}")
             return {"status": "error", "error": str(e)}
@@ -163,8 +169,40 @@ class NotificationService:
         message: str,
         channel: str = "SMS",
     ) -> Dict[str, Any]:
-        """Send SMS/WhatsApp via Twilio."""
+        """Send SMS/WhatsApp via Twilio or WPPConnect."""
         formatted_num = self._format_phone(to_number)
+        
+        # ─── WPPConnect WhatsApp Integration ───
+        if channel == "WHATSAPP":
+            wpp_url = os.getenv("WPPCONNECT_API_URL", "")
+            wpp_session = os.getenv("WPPCONNECT_SESSION", "cartguard")
+            wpp_token = os.getenv("WPPCONNECT_TOKEN", "")
+            
+            if wpp_url and formatted_num:
+                cleaned_phone = formatted_num.replace("+", "")
+                url = f"{wpp_url.rstrip('/')}/api/{wpp_session}/send-message"
+                headers = {"Content-Type": "application/json"}
+                if wpp_token:
+                    headers["Authorization"] = f"Bearer {wpp_token}"
+                
+                print(f"[WHATSAPP WPPCONNECT DISPATCHING] To: {cleaned_phone} via {url}")
+                try:
+                    async with httpx.AsyncClient() as client:
+                        response = await client.post(
+                            url,
+                            headers=headers,
+                            json={"phone": cleaned_phone, "message": message},
+                            timeout=5.0
+                        )
+                        if response.status_code in [200, 201]:
+                            print(f"[WHATSAPP WPPCONNECT SUCCESS] Sent to {cleaned_phone}")
+                            return {"status": "sent", "channel": "whatsapp", "provider": "wppconnect"}
+                        else:
+                            print(f"[WHATSAPP WPPCONNECT ERROR] Status {response.status_code}: {response.text}")
+                except Exception as e:
+                    print(f"[WHATSAPP WPPCONNECT EXCEPTION] {str(e)}")
+                # If WPPConnect fails, fall through to Twilio/Mock
+
         if not self.twilio_sid or not formatted_num:
             print(f"[{channel} MOCK] To: '{formatted_num}' (Twilio SID present: {bool(self.twilio_sid)}) | Message: {message}")
             return {"status": "mock_sent", "channel": channel.lower()}
