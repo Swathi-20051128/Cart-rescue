@@ -8,6 +8,7 @@ import ProductDetail from "./pages/store/ProductDetail.jsx";
 import CartPage from "./pages/store/CartPage.jsx";
 import Checkout from "./pages/store/Checkout.jsx";
 import Orders from "./pages/store/Orders.jsx";
+import UserNotifications from "./pages/store/UserNotifications.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 
 function App() {
@@ -29,6 +30,9 @@ function App() {
         } />
         <Route path="/cart" element={
           <ProtectedRoute role="user"><CartPage /></ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute role="user"><UserNotifications /></ProtectedRoute>
         } />
         <Route path="/checkout" element={
           <ProtectedRoute role="user"><Checkout /></ProtectedRoute>

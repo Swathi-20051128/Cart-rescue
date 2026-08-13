@@ -125,9 +125,13 @@ class AuditService:
         doc.pop("_id", None)
         return doc
 
-    def get_logs(self, limit: int = 50, session_id: Optional[str] = None) -> List[Dict]:
+    def get_logs(self, limit: int = 50, session_id: Optional[str] = None, user_id: Optional[str] = None) -> List[Dict]:
         """Retrieve audit log entries."""
-        query = {"session_id": session_id} if session_id else {}
+        query = {}
+        if session_id:
+            query["session_id"] = session_id
+        if user_id:
+            query["user_id"] = user_id
         cursor = self.audit_log.find(query).sort("timestamp", DESCENDING).limit(limit)
         return [self._clean(doc) for doc in cursor]
 

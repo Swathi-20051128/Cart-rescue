@@ -427,9 +427,9 @@ async def get_audit_log_endpoint(session_id: str):
 
 
 @app.get("/api/v1/audit", tags=["Audit"])
-async def get_audit_logs_v1(limit: int = 50, session_id: Optional[str] = None):
+async def get_audit_logs_v1(limit: int = 50, session_id: Optional[str] = None, user_id: Optional[str] = None):
     """Retrieve audit log entries."""
-    logs = audit_service.get_logs(limit=limit, session_id=session_id)
+    logs = audit_service.get_logs(limit=limit, session_id=session_id, user_id=user_id)
     return {"logs": logs, "count": len(logs)}
 
 

@@ -57,6 +57,16 @@ const Navbar = () => {
           {user?.role === "user" && (
             <>
               <Link to="/">Shop</Link>
+              <Link to="/notifications" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                Notifications
+                {cart?.recoveryOffer?.message && (
+                  <span className="notification-badge-dot" style={{
+                    width: 7, height: 7, background: "#EF4444", borderRadius: "50%",
+                    boxShadow: "0 0 0 2px rgba(239, 68, 68, 0.4)",
+                    animation: "pulse-dot 1.5s infinite"
+                  }}></span>
+                )}
+              </Link>
               <Link to="/cart" className="nav-cart-wrapper">
                 Cart
                 {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}

@@ -166,6 +166,18 @@ export const goodbye = async (req, res) => {
   }
 };
 
-export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal, heartbeat, goodbye };
+export const getUserNotifications = async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+    const resp = await fetch(`${ML_URL}/api/v1/audit?limit=50&user_id=${userId}`);
+    if (!resp.ok) throw new Error(`ML service responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data.logs || data);
+  } catch (err) {
+    res.status(502).json({ message: "Failed to fetch user notifications", detail: err.message });
+  }
+};
+
+export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal, heartbeat, goodbye, getUserNotifications };
 
 
