@@ -433,6 +433,11 @@ export default function LiveCarts() {
         payment_failures: cart.paymentFailures || 0,
         form_field_errors: cart.formFieldErrors || 0,
         email_opt_in: true,
+        cart_items: cart.items.map(i => ({
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity
+        })),
       };
       const { data } = await api.post("/admin/score-session", payload);
       setAgentResults(r => ({ ...r, [id]: data }));
