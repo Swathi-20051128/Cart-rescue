@@ -36,8 +36,12 @@ export default function Notifications() {
     setWppQrCode("");
     api.post("/admin/whatsapp-start")
       .then((res) => {
-        const status = res.data.status || "DISCONNECTED";
-        setWppStatus(status);
+        const status = (res.data.status || "").toUpperCase();
+        if (status === "CONNECTED") {
+          setWppStatus("CONNECTED");
+        } else {
+          setWppStatus("STARTING");
+        }
         if (res.data.qrcode) {
           setWppQrCode(res.data.qrcode);
         }

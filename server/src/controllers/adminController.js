@@ -146,7 +146,8 @@ export const startWhatsAppSession = async (req, res) => {
     const baseUrl = wppUrl.replace(/\/+$/, "");
     const resp = await fetch(`${baseUrl}/api/${wppSession}/start-session`, {
       method: "POST",
-      headers
+      headers,
+      body: JSON.stringify({})
     });
     
     const contentType = resp.headers.get("content-type") || "";
