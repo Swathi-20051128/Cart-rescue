@@ -24,6 +24,12 @@ const cartSchema = new mongoose.Schema(
     lastActivity: { type: Date, default: Date.now },
     lastRiskScore: { type: Number, default: 0 },
     lastRiskLevel: { type: String, default: "LOW" },
+    recoveryOffer: {
+      actionType: { type: String, default: "" },
+      channel: { type: String, default: "" },
+      message: { type: String, default: "" },
+      discountAmount: { type: Number, default: 0 }
+    }
   },
   { timestamps: true }
 );

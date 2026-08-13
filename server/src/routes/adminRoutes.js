@@ -9,6 +9,8 @@ import {
   getUpliftSimulation,
   getAuditLog,
   getAllOrdersAdmin,
+  getWhatsAppStatus,
+  startWhatsAppSession,
 } from "../controllers/adminController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
@@ -25,5 +27,7 @@ router.post("/demo-scenarios/:scenarioName/run", runDemoScenario);
 router.get("/uplift", getUpliftSimulation);
 router.get("/audit-log", getAuditLog);
 router.get("/orders", getAllOrdersAdmin);
+router.get("/whatsapp-status", getWhatsAppStatus);
+router.post("/whatsapp-start", startWhatsAppSession);
 
 export default router;

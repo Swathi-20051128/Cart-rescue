@@ -100,3 +100,46 @@ export const getAllOrdersAdmin = async (req, res) => {
   const orders = await Order.find().populate("user", "name email").sort({ createdAt: -1 });
   res.json(orders);
 };
+
+export const getWhatsAppStatus = async (req, res) => {
+  const wppUrl = process.env.WPPCONNECT_API_URL || "http://localhost:21465";
+  const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
+  const wppToken = process.env.WPPCONNECT_TOKEN || "";
+
+  const headers = { "Content-Type": "application/json" };
+  if (wppToken) {
+    headers["Authorization"] = `Bearer ${wppToken}`;
+  }
+
+  try {
+    const baseUrl = wppUrl.replace(/\/+$/, "");
+    const resp = await fetch(`${baseUrl}/api/${wppSession}/status-session`, { headers });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ message: "WPPConnect server offline", error: err.message });
+  }
+};
+
+export const startWhatsAppSession = async (req, res) => {
+  const wppUrl = process.env.WPPCONNECT_API_URL || "http://localhost:21465";
+  const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
+  const wppToken = process.env.WPPCONNECT_TOKEN || "";
+
+  const headers = { "Content-Type": "application/json" };
+  if (wppToken) {
+    headers["Authorization"] = `Bearer ${wppToken}`;
+  }
+
+  try {
+    const baseUrl = wppUrl.replace(/\/+$/, "");
+    const resp = await fetch(`${baseUrl}/api/${wppSession}/start-session`, {
+      method: "POST",
+      headers
+    });
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ message: "WPPConnect server offline", error: err.message });
+  }
+};

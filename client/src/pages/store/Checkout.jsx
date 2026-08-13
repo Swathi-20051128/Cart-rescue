@@ -117,6 +117,7 @@ function Field({ label, value, onChange, type = "text", placeholder, required })
 // ─── Step 1: Delivery Details ─────────────────────────────────────────────────
 function StepDetails({ data, onChange, onNext }) {
   const [errors, setErrors] = useState({});
+  const { sendTelemetrySignal } = useCart();
 
   const validate = () => {
     const e = {};
@@ -128,7 +129,7 @@ function StepDetails({ data, onChange, onNext }) {
     if (!data.pincode.trim()) e.pincode = "Pincode is required";
 
     if (Object.keys(e).length > 0) {
-      api.post("/cart/signal", { signal: "form_error" }).catch(() => {});
+      sendTelemetrySignal("form_error");
     }
 
     setErrors(e);
@@ -202,6 +203,7 @@ const PAYMENT_METHODS = [
 
 function StepPayment({ selected, onSelect, upiId, onUpiChange, cardNo, onCardChange, onNext, onBack }) {
   const [errors, setErrors] = useState({});
+  const { sendTelemetrySignal } = useCart();
 
   const validate = () => {
     const e = {};
@@ -210,7 +212,7 @@ function StepPayment({ selected, onSelect, upiId, onUpiChange, cardNo, onCardCha
     if (selected === "card" && cardNo.replace(/\s/g, "").length < 16) e.card = "Enter a valid 16-digit card number";
 
     if (Object.keys(e).length > 0) {
-      api.post("/cart/signal", { signal: "payment_failure" }).catch(() => {});
+      sendTelemetrySignal("payment_failure");
     }
 
     setErrors(e);
@@ -426,17 +428,14 @@ function OrderSuccess({ orderId }) {
 
 // ─── Main Checkout Page ───────────────────────────────────────────────────────
 export default function Checkout() {
-  const { updateCartState } = useCart();
+  const { cart, updateCartState, sendTelemetrySignal } = useCart();
   const [step, setStep]       = useState(0); // 0=Details, 1=Payment, 2=Confirm
-  const [cart, setCart]       = useState(null);
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
   const [payError, setPayError] = useState("");
 
   const [details, setDetails] = useState({ name: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" });
   const [payment, setPayment] = useState({ method: "", upiId: "", cardNo: "" });
-
-  useEffect(() => { api.get("/cart").then(r => setCart(r.data)); }, []);
 
   const updateDetail  = (k, v) => setDetails(d => ({ ...d, [k]: v }));
   const updatePayment = (k, v) => {
@@ -449,12 +448,8 @@ export default function Checkout() {
     setPayError("");
 
     if (payment.method !== "cod") {
-      try {
-        // Send a telemetry signal for payment failure
-        await api.post("/cart/signal", { signal: "payment_failure" });
-      } catch (err) {
-        console.error("Signal tracking failed", err);
-      }
+      // Send a telemetry signal for payment failure
+      await sendTelemetrySignal("payment_failure");
 
       // Select appropriate error message
       let msg = "Payment failed. Please verify your details.";

@@ -45,6 +45,20 @@ const scoreCartWithML = async (cart, user) => {
     const result = await resp.json();
     cart.lastRiskScore = result.risk_score ?? 0;
     cart.lastRiskLevel = result.risk_level ?? "LOW";
+
+    const action = result.action || {};
+    const type = action.action_type || action.action;
+    if (type && type !== "DO_NOTHING") {
+      cart.recoveryOffer = {
+        actionType: type,
+        channel: action.channel || "IN_APP",
+        message: action.message || "",
+        discountAmount: action.discount_amount || 0
+      };
+    } else {
+      cart.recoveryOffer = undefined;
+    }
+
     await cart.save();
     return result;
   } catch (err) {

@@ -5,6 +5,7 @@ import ScoreSession from "./ScoreSession.jsx";
 import AuditLog from "./AuditLog.jsx";
 import DemoScenarios from "./DemoScenarios.jsx";
 import UpliftAnalysis from "./UpliftAnalysis.jsx";
+import Notifications from "./Notifications.jsx";
 
 const TABS = {
   overview:   { label: "Overview",        icon: "ti-layout-dashboard", component: Overview },
@@ -12,6 +13,7 @@ const TABS = {
   score:      { label: "Score a Session",  icon: "ti-target-arrow",     component: ScoreSession },
   demo:       { label: "Demo Scenarios",   icon: "ti-player-play",      component: DemoScenarios },
   uplift:     { label: "Uplift Analysis",  icon: "ti-chart-line",       component: UpliftAnalysis },
+  notifications: { label: "Notifications", icon: "ti-bell",            component: Notifications },
   audit:      { label: "Audit Log",        icon: "ti-list-details",     component: AuditLog },
 };
 

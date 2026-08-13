@@ -33,10 +33,22 @@ export const CartProvider = ({ children }) => {
     setCart(newCart);
   };
 
+  const sendTelemetrySignal = async (signal) => {
+    if (!user || user.role !== "user") return null;
+    try {
+      const { data } = await api.post("/cart/signal", { signal });
+      setCart(data.cart);
+      return data;
+    } catch (err) {
+      console.error("Failed to send telemetry", err);
+      return null;
+    }
+  };
+
   const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
   return (
-    <CartContext.Provider value={{ cart, loading, fetchCart, updateCartState, cartCount }}>
+    <CartContext.Provider value={{ cart, loading, fetchCart, updateCartState, cartCount, sendTelemetrySignal }}>
       {children}
     </CartContext.Provider>
   );
