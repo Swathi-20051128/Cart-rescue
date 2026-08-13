@@ -10,6 +10,7 @@ export default function Notifications() {
   const [wppStatus, setWppStatus] = useState("DISCONNECTED");
   const [wppQrCode, setWppQrCode] = useState("");
   const [wppLoading, setWppLoading] = useState(false);
+  const [qrTimestamp, setQrTimestamp] = useState(Date.now());
 
   const checkWppStatus = () => {
     setWppLoading(true);
@@ -66,6 +67,7 @@ export default function Notifications() {
 
     if (activeTab === "whatsapp" && isPollingState) {
       interval = setInterval(() => {
+        setQrTimestamp(Date.now());
         api.get("/admin/whatsapp-status")
           .then((res) => {
             const status = res.data.status || "DISCONNECTED";
@@ -210,11 +212,25 @@ export default function Notifications() {
               <div style={{ fontSize: 11, color: "var(--text-muted)", textAlign: "center" }}>
                 Open WhatsApp on your mobile device ➡️ Linked Devices ➡️ Link a Device, and scan below:
               </div>
-              {wppQrCode ? (
-                <img src={wppQrCode} alt="WhatsApp Link QR Code" style={{ background: "#fff", padding: 12, borderRadius: 8, width: 200, height: 200, border: "1px solid var(--border)" }} />
-              ) : (
-                <div style={{ width: 200, height: 200, background: "var(--panel)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--text-muted)" }}>
-                  Generating image…
+              <img 
+                src={`/api/admin/whatsapp-qrcode?t=${qrTimestamp}`} 
+                alt="WhatsApp Link QR Code" 
+                onError={(e) => {
+                  if (wppQrCode) {
+                    e.target.src = wppQrCode;
+                    e.target.style.display = "block";
+                  } else {
+                    e.target.style.display = "none";
+                  }
+                }}
+                onLoad={(e) => {
+                  e.target.style.display = "block";
+                }}
+                style={{ background: "#fff", padding: 12, borderRadius: 8, width: 200, height: 200, border: "1px solid var(--border)", display: "none" }} 
+              />
+              {!wppQrCode && (
+                <div id="wpp-qr-loader" style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
+                  Syncing visual session token…
                 </div>
               )}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>

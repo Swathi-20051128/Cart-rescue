@@ -11,6 +11,7 @@ import {
   getAllOrdersAdmin,
   getWhatsAppStatus,
   startWhatsAppSession,
+  getWhatsAppQRCode,
 } from "../controllers/adminController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
@@ -29,5 +30,6 @@ router.get("/audit-log", getAuditLog);
 router.get("/orders", getAllOrdersAdmin);
 router.get("/whatsapp-status", getWhatsAppStatus);
 router.post("/whatsapp-start", startWhatsAppSession);
+router.get("/whatsapp-qrcode", getWhatsAppQRCode);
 
 export default router;

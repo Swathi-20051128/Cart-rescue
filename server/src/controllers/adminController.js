@@ -162,3 +162,29 @@ export const startWhatsAppSession = async (req, res) => {
     res.status(502).json({ message: "WPPConnect server offline", error: err.message });
   }
 };
+
+export const getWhatsAppQRCode = async (req, res) => {
+  const wppUrl = process.env.WPPCONNECT_API_URL || "http://127.0.0.1:21465";
+  const wppSession = process.env.WPPCONNECT_SESSION || "cartguard";
+  const wppToken = process.env.WPPCONNECT_TOKEN || "";
+
+  const headers = {};
+  if (wppToken) {
+    headers["Authorization"] = `Bearer ${wppToken}`;
+  }
+
+  try {
+    const baseUrl = wppUrl.replace(/\/+$/, "");
+    const resp = await fetch(`${baseUrl}/api/${wppSession}/qrcode`, { headers });
+    
+    const contentType = resp.headers.get("content-type") || "";
+    if (resp.status === 200 && contentType.includes("image")) {
+      res.setHeader("Content-Type", "image/png");
+      resp.body.pipe(res);
+    } else {
+      res.status(404).send("QR code not ready yet");
+    }
+  } catch (err) {
+    res.status(502).send("WPPConnect server offline");
+  }
+};
