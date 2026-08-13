@@ -175,7 +175,7 @@ export const getWhatsAppQRCode = async (req, res) => {
 
   try {
     const baseUrl = wppUrl.replace(/\/+$/, "");
-    const resp = await fetch(`${baseUrl}/api/${wppSession}/qrcode`, { headers });
+    const resp = await fetch(`${baseUrl}/api/${wppSession}/qrcode-session`, { headers });
     
     const contentType = resp.headers.get("content-type") || "";
     if (resp.status === 200 && contentType.includes("image")) {
