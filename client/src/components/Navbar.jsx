@@ -26,7 +26,11 @@ const Navbar = () => {
           width: "100%",
           boxSizing: "border-box",
         }}>
-          <span>🔔 {cart.recoveryOffer.message}</span>
+          <span>
+            🔔 {cart.recoveryOffer.message.includes("comparing items")
+              ? "📊 We noticed you are comparing items! Check out the specs comparison helper below in your cart."
+              : cart.recoveryOffer.message}
+          </span>
           {cart.recoveryOffer.discountAmount > 0 && (
             <span style={{
               background: "rgba(255,255,255,0.2)",

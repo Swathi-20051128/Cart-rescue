@@ -4,9 +4,125 @@ import api from "../../api/axios.js";
 import useHeartbeat from "../../hooks/useHeartbeat.js";
 import { useCart } from "../../context/CartContext.jsx";
 
+// ── Parser for Comparison Message ─────────────────────────────────────────────
+const parseComparisonMessage = (message) => {
+  if (!message || !message.includes("comparing items")) return null;
+
+  try {
+    const lines = message.split("\n").map(l => l.trim()).filter(Boolean);
+    const comparisonRows = [];
+    let item1Name = "Product A";
+    let item2Name = "Product B";
+    let price1 = 0;
+    let price2 = 0;
+
+    lines.forEach(line => {
+      if (line.startsWith("- ")) {
+        const content = line.substring(2);
+        const colonIndex = content.indexOf(":");
+        if (colonIndex !== -1) {
+          const feature = content.substring(0, colonIndex).trim();
+          const valuesStr = content.substring(colonIndex + 1).trim();
+          const vsIndex = valuesStr.toLowerCase().indexOf(" vs ");
+          if (vsIndex !== -1) {
+            const val1 = valuesStr.substring(0, vsIndex).trim();
+            const val2 = valuesStr.substring(vsIndex + 4).trim();
+            
+            comparisonRows.push({ feature, val1, val2 });
+
+            if (feature.toLowerCase() === "price") {
+              const match1 = val1.match(/(.+?)\s*\(₹(\d+)\)/);
+              const match2 = val2.match(/(.+?)\s*\(₹(\d+)\)/);
+              if (match1) {
+                item1Name = match1[1].trim();
+                price1 = parseFloat(match1[2]);
+              } else {
+                item1Name = val1;
+              }
+              if (match2) {
+                item2Name = match2[1].trim();
+                price2 = parseFloat(match2[2]);
+              } else {
+                item2Name = val2;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (comparisonRows.length === 0) return null;
+
+    const priceDiff = Math.abs(price1 - price2);
+    const item1Cheaper = price1 < price2;
+
+    const prosCons = {
+      item1: {
+        pros: item1Cheaper 
+          ? [`Save ₹${priceDiff} (Budget-friendly Option)`]
+          : ["Premium specifications", "More durable construction"],
+        cons: item1Cheaper
+          ? ["Fewer specifications", "Standard durability and warranty"]
+          : [`Premium pricing (₹${priceDiff} more expensive)`]
+      },
+      item2: {
+        pros: !item1Cheaper 
+          ? [`Save ₹${priceDiff} (Budget-friendly Option)`]
+          : ["Premium specifications", "More durable construction"],
+        cons: !item1Cheaper
+          ? ["Fewer specifications", "Standard durability and warranty"]
+          : [`Premium pricing (₹${priceDiff} more expensive)`]
+      }
+    };
+
+    comparisonRows.forEach(row => {
+      const f = row.feature.toLowerCase();
+      if (f.includes("coating") || f.includes("material") || f.includes("handle") || f.includes("warranty")) {
+        const val1 = row.val1.toLowerCase();
+        const val2 = row.val2.toLowerCase();
+        let val1Better = false;
+        let val2Better = false;
+
+        if (f.includes("warranty") || f.includes("layer") || f.includes("coating")) {
+          const num1 = parseInt(val1.match(/\d+/) || [0]);
+          const num2 = parseInt(val2.match(/\d+/) || [0]);
+          if (num1 > num2) val1Better = true;
+          else if (num2 > num1) val2Better = true;
+        } else if (val1.includes("silicone") || val1.includes("cool-touch") || val1.includes("cool touch")) {
+          if (!val2.includes("silicone") && !val2.includes("cool-touch") && !val2.includes("cool touch")) val1Better = true;
+        } else if (val2.includes("silicone") || val2.includes("cool-touch") || val2.includes("cool touch")) {
+          if (!val1.includes("silicone") && !val1.includes("cool-touch") && !val1.includes("cool touch")) val2Better = true;
+        }
+
+        if (val1Better) {
+          prosCons.item1.pros.push(`${row.feature}: ${row.val1}`);
+          prosCons.item2.cons.push(`${row.feature}: Basic (${row.val2})`);
+        } else if (val2Better) {
+          prosCons.item2.pros.push(`${row.feature}: ${row.val2}`);
+          prosCons.item1.cons.push(`${row.feature}: Basic (${row.val1})`);
+        }
+      }
+    });
+
+    const suggestion = item1Cheaper
+      ? `👉 Recommendation: Choose "${item2Name}" if you want a premium build and extended warranty. Otherwise, choose "${item1Name}" to save money on a great daily-use set.`
+      : `👉 Recommendation: Choose "${item1Name}" if you want a premium build and extended warranty. Otherwise, choose "${item2Name}" to save money on a great daily-use set.`;
+
+    return {
+      comparisonRows,
+      item1Name,
+      item2Name,
+      prosCons,
+      suggestion
+    };
+  } catch (err) {
+    console.error("Failed to parse comparison helper message:", err);
+    return null;
+  }
+};
+
 // ── AI Recovery Offer Banner ──────────────────────────────────────────────────
 // Shown ONLY when the AI agent pipeline recommends an intervention.
-// The technical pipeline is completely hidden from the user.
 function AIOfferBanner({ risk, onDismiss }) {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -19,7 +135,6 @@ function AIOfferBanner({ risk, onDismiss }) {
 
   useEffect(() => {
     if (hasAction && !dismissed) {
-      // Slight delay so it feels natural, not instant
       const t = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(t);
     }
@@ -33,7 +148,111 @@ function AIOfferBanner({ risk, onDismiss }) {
     onDismiss?.();
   };
 
-  // Map action type to friendly copy
+  const parsed = parseComparisonMessage(message);
+
+  if (parsed) {
+    return (
+      <div style={{
+        padding: "20px",
+        background: "rgba(245,158,11,0.06)",
+        border: "1px solid rgba(245,158,11,0.25)",
+        borderRadius: 14,
+        animation: "offerSlideIn 0.4s cubic-bezier(0.22,1,0.36,1)",
+        position: "relative",
+        boxSizing: "border-box",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        marginBottom: 20
+      }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 24 }}>📊</span>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#F59E0B" }}>Smart Comparison Helper</div>
+          </div>
+          <button
+            onClick={dismiss}
+            style={{
+              background: "transparent", border: "none", color: "var(--text-muted)",
+              cursor: "pointer", fontSize: 22, lineHeight: 1, padding: 0,
+            }}
+            aria-label="Dismiss"
+          >×</button>
+        </div>
+
+        {/* Specs Table */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, background: "rgba(255,255,255,0.03)", borderRadius: 10, overflow: "hidden" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.08)" }}>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "var(--text)" }}>Feature</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "var(--text)" }}>{parsed.item1Name}</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "var(--text)" }}>{parsed.item2Name}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parsed.comparisonRows.map((r, idx) => (
+                <tr key={idx} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: idx % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}>
+                  <td style={{ padding: "10px 14px", fontWeight: 600, color: "var(--text-secondary)" }}>{r.feature}</td>
+                  <td style={{ padding: "10px 14px", color: "var(--text)" }}>{r.val1}</td>
+                  <td style={{ padding: "10px 14px", color: "var(--text)" }}>{r.val2}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pros & Cons Columns */}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 260, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text)", marginBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6 }}>
+              {parsed.item1Name}
+            </div>
+            <div style={{ color: "#10B981", fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Pros:</div>
+            <ul style={{ margin: "0 0 12px 0", paddingLeft: 18, fontSize: 12, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 4 }}>
+              {parsed.prosCons.item1.pros.map((p, idx) => <li key={idx}>{p}</li>)}
+            </ul>
+            <div style={{ color: "#EF4444", fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Cons:</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 4 }}>
+              {parsed.prosCons.item1.cons.map((c, idx) => <li key={idx}>{c}</li>)}
+            </ul>
+          </div>
+
+          <div style={{ flex: 1, minWidth: 260, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text)", marginBottom: 10, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 6 }}>
+              {parsed.item2Name}
+            </div>
+            <div style={{ color: "#10B981", fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Pros:</div>
+            <ul style={{ margin: "0 0 12px 0", paddingLeft: 18, fontSize: 12, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 4 }}>
+              {parsed.prosCons.item2.pros.map((p, idx) => <li key={idx}>{p}</li>)}
+            </ul>
+            <div style={{ color: "#EF4444", fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>Cons:</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "var(--text-secondary)", display: "flex", flexDirection: "column", gap: 4 }}>
+              {parsed.prosCons.item2.cons.map((c, idx) => <li key={idx}>{c}</li>)}
+            </ul>
+          </div>
+        </div>
+
+        {/* Suggestion Callout */}
+        <div style={{
+          background: "rgba(245,158,11,0.08)",
+          borderLeft: "4px solid #F59E0B",
+          borderRadius: "0 8px 8px 0",
+          padding: "12px 16px",
+          fontSize: 13,
+          color: "var(--text)",
+          lineHeight: 1.5,
+          fontWeight: 500
+        }}>
+          {parsed.suggestion}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback rendering for regular banners
   const bannerConfig = {
     ALTERNATE_PAYMENT: {
       icon: "💳",
@@ -103,6 +322,7 @@ function AIOfferBanner({ risk, onDismiss }) {
       borderRadius: 12,
       animation: "offerSlideIn 0.4s cubic-bezier(0.22,1,0.36,1)",
       position: "relative",
+      marginBottom: 20
     }}>
       <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{cfg.icon}</div>
       <div style={{ flex: 1 }}>
