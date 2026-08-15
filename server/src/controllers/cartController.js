@@ -77,6 +77,10 @@ export const getCart = async (req, res) => {
   const cart = await getOrCreateCart(req.user);
   res.json(cart);
 };
+const getProductIdStr = (productField) => {
+  if (!productField) return "";
+  return productField._id ? productField._id.toString() : productField.toString();
+};
 
 export const addToCart = async (req, res) => {
   const { productId, quantity = 1 } = req.body;
@@ -84,7 +88,7 @@ export const addToCart = async (req, res) => {
   if (!product) return res.status(404).json({ message: "Product not found" });
 
   const cart = await getOrCreateCart(req.user);
-  const existing = cart.items.find((i) => i.product.toString() === productId);
+  const existing = cart.items.find((i) => getProductIdStr(i.product) === productId);
   if (existing) {
     existing.quantity += quantity;
   } else {
@@ -106,11 +110,11 @@ export const addToCart = async (req, res) => {
 export const updateCartItem = async (req, res) => {
   const { productId, quantity } = req.body;
   const cart = await getOrCreateCart(req.user);
-  const item = cart.items.find((i) => i.product.toString() === productId);
+  const item = cart.items.find((i) => getProductIdStr(i.product) === productId);
   if (!item) return res.status(404).json({ message: "Item not in cart" });
 
   if (quantity <= 0) {
-    cart.items = cart.items.filter((i) => i.product.toString() !== productId);
+    cart.items = cart.items.filter((i) => getProductIdStr(i.product) !== productId);
   } else {
     item.quantity = quantity;
   }
@@ -123,7 +127,7 @@ export const updateCartItem = async (req, res) => {
 
 export const removeFromCart = async (req, res) => {
   const cart = await getOrCreateCart(req.user);
-  cart.items = cart.items.filter((i) => i.product.toString() !== req.params.productId);
+  cart.items = cart.items.filter((i) => getProductIdStr(i.product) !== req.params.productId);
   cart.lastActivity = new Date();
   await cart.save();
 
