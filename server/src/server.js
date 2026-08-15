@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import morgan from "morgan";
 import connectDB from "./config/db.js";
+import { startCartScheduler } from "./utils/scheduler.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
@@ -11,7 +12,10 @@ import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
-connectDB();
+connectDB().then(() => {
+  // Start periodic cart recovery background scheduler
+  startCartScheduler();
+});
 
 const app = express();
 
