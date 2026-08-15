@@ -8,6 +8,7 @@ import {
   heartbeat,
   goodbye,
   getUserNotifications,
+  chat,
 } from "../controllers/cartController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
@@ -22,5 +23,6 @@ router.delete("/:productId", removeFromCart);
 router.post("/signal", trackSignal);
 router.post("/heartbeat", heartbeat);
 router.post("/goodbye", goodbye);
+router.post("/chat", chat);
 
 export default router;

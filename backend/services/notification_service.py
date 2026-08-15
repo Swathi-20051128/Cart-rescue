@@ -28,7 +28,7 @@ class NotificationService:
         self.from_email = "onboarding@resend.dev"
 
     async def send_notification(self, session_data: Dict[str, Any], action: Dict[str, Any]):
-        """Send notification based on action channel and available user contacts."""
+        """Send notification across all available channels concurrently."""
         action_type = action.get("action_type", "DO_NOTHING")
         message = action.get("message", "")
         
@@ -36,8 +36,6 @@ class NotificationService:
             print("[NOTIFICATION] Skipped: Action is DO_NOTHING or message is empty.")
             return {"status": "skipped", "reason": "no action or DO_NOTHING"}
 
-        channel = action.get("channel", "IN_APP")
-        
         user_phone = (
             session_data.get("user_phone")
             or session_data.get("user_mobile")
@@ -46,35 +44,49 @@ class NotificationService:
         )
         user_email = session_data.get("user_email") or ""
 
-        # Auto-promote channel from IN_APP to WHATSAPP/SMS/EMAIL if contact info is provided
-        if channel in ["IN_APP", "NONE"]:
-            if session_data.get("user_whatsapp") or (user_phone and session_data.get("whatsapp_opt_in")):
-                channel = "WHATSAPP"
-            elif user_phone:
-                channel = "SMS"
-            elif user_email:
-                channel = "EMAIL"
+        results = {}
 
-        # Consent check
-        if not self._check_consent(session_data, channel):
-            print(f"[NOTIFICATION SKIPPED] Consent check failed for channel={channel}")
-            return {"status": "skipped", "reason": f"consent check failed for {channel}"}
+        # 1. Email Dispatch
+        if user_email and self._check_consent(session_data, "EMAIL"):
+            try:
+                results["email"] = await self.send_email(
+                    to_email=user_email,
+                    subject="Your cart is waiting! 🛒",
+                    message=message,
+                    discount=action.get("discount_amount", 0),
+                )
+            except Exception as e:
+                results["email"] = {"status": "failed", "error": str(e)}
 
-        if channel == "EMAIL":
-            return await self.send_email(
-                to_email=user_email,
-                subject="Your cart is waiting! 🛒",
-                message=message,
-                discount=action.get("discount_amount", 0),
-            )
-        elif channel in ["SMS", "WHATSAPP"]:
-            return await self.send_sms(
-                to_number=user_phone,
-                message=message,
-                channel=channel,
-            )
-        
-        return {"status": "no_action"}
+        # 2. WhatsApp/SMS Dispatch
+        if user_phone:
+            if self._check_consent(session_data, "WHATSAPP"):
+                try:
+                    results["whatsapp"] = await self.send_sms(
+                        to_number=user_phone,
+                        message=message,
+                        channel="WHATSAPP",
+                    )
+                except Exception as e:
+                    results["whatsapp"] = {"status": "failed", "error": str(e)}
+            elif self._check_consent(session_data, "SMS"):
+                try:
+                    results["sms"] = await self.send_sms(
+                        to_number=user_phone,
+                        message=message,
+                        channel="SMS",
+                    )
+                except Exception as e:
+                    results["sms"] = {"status": "failed", "error": str(e)}
+
+        # 3. In-App alert / Dashboard (naturally logged via audit)
+        results["in_app"] = {"status": "logged", "message": message}
+
+        return {
+            "status": "dispatched",
+            "channels": list(results.keys()),
+            "results": results
+        }
 
     def _check_consent(self, session_data: Dict, channel: str) -> bool:
         """TRAI/DND compliance check."""

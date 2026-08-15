@@ -7,9 +7,9 @@ import dns from "dns";
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 export const connectDB = async () => {
-  const uri = process.env.MONGO_URI;
+  const uri = process.env.MONGO_URI || process.env.DATABASE_URL;
   if (!uri) {
-    console.error("[MongoDB] MONGO_URI is not set in .env");
+    console.error("[MongoDB] MONGO_URI or DATABASE_URL is not set in .env");
     process.exit(1);
   }
   try {

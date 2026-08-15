@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     stock: { type: Number, default: 100 },
     rating: { type: Number, default: 4.2 },
+    specifications: { type: Map, of: String, default: {} },
   },
   { timestamps: true }
 );

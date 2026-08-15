@@ -10,6 +10,7 @@ import Checkout from "./pages/store/Checkout.jsx";
 import Orders from "./pages/store/Orders.jsx";
 import UserNotifications from "./pages/store/UserNotifications.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import ChatbotWidget from "./components/ChatbotWidget.jsx";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
           <ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>
         } />
       </Routes>
+      <ChatbotWidget />
     </>
   );
 }

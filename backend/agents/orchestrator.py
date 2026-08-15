@@ -61,6 +61,49 @@ def check_cart_comparison_pattern(session_data: Dict[str, Any]) -> bool:
     return False
 
 
+def generate_comparison_message(session_data: Dict[str, Any]) -> str:
+    """Generate a detailed specifications comparison message for similar cart items."""
+    items = session_data.get("cart_items", [])
+    if not items or len(items) < 2:
+        return "We noticed you are comparing items! Get the best value and claim a special discount."
+
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            item1 = items[i]
+            item2 = items[j]
+            
+            name1 = (item1.get("name") or "").lower().strip()
+            name2 = (item2.get("name") or "").lower().strip()
+            price1 = float(item1.get("price") or 0)
+            price2 = float(item2.get("price") or 0)
+            
+            words1 = name1.split()
+            words2 = name2.split()
+            min_len = min(len(words1), len(words2))
+            if min_len >= 2:
+                common_prefix = words1[:2] == words2[:2]
+            else:
+                common_prefix = name1 == name2
+                
+            if common_prefix and price1 != price2:
+                specs1 = item1.get("specifications", {})
+                specs2 = item2.get("specifications", {})
+                
+                msg = f"We noticed you are comparing items! Here is a comparison helper to decide:\n"
+                msg += f"- Price: {item1.get('name')} (₹{price1:.0f}) vs {item2.get('name')} (₹{price2:.0f})\n"
+                
+                all_keys = set(specs1.keys()).union(set(specs2.keys()))
+                for k in sorted(all_keys):
+                    val1 = specs1.get(k, "N/A")
+                    val2 = specs2.get(k, "N/A")
+                    msg += f"- {k}: {val1} vs {val2}\n"
+                    
+                msg += "Complete your purchase now for free shipping and easy 30-day returns!"
+                return msg
+
+    return "We noticed you are comparing items! Get the best value and claim a special discount."
+
+
 class LLMClient:
     """Unified LLM client supporting Groq (Llama), OpenAI, and local Ollama."""
 
@@ -652,6 +695,9 @@ Respond in JSON:
             policy.get("max_discount_inr", 0)
         )
         
+        if diagnosis.get("root_cause") == "COMPARISON_SHOPPING":
+            action["message"] = generate_comparison_message(session_data)
+
         latency = (time.time() - start) * 1000
         action["latency_ms"] = latency
         action["cost_inr"] = llm_result.get("cost_inr", 0.001)
@@ -674,7 +720,7 @@ Respond in JSON:
             "COMPARISON_SHOPPING": {
                 "action_type": "SOCIAL_PROOF_NUDGE",
                 "channel": "IN_APP",
-                "message": "We noticed you are comparing items! Here is a comparison helper: get the best value, free 30-day returns, and instant price match.",
+                "message": generate_comparison_message(session_data),
                 "discount_amount": 0,
                 "discount_type": "NONE",
                 "urgency": "MEDIUM",

@@ -25,6 +25,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
 from agents.orchestrator import orchestrator
+from agents.chatbot_agent import ChatbotAgent
 from services.audit_service import audit_service
 from services.notification_service import notification_service
 from services.redis_service import redis_service
@@ -212,6 +213,11 @@ class BatchSessionRequest(BaseModel):
     sessions: List[SessionRequest]
 
 
+class ChatRequest(BaseModel):
+    message: str
+    context: Dict[str, Any]
+
+
 # ──────────────────────────── WebSocket Manager ────────────────────────────
 class ConnectionManager:
     def __init__(self):
@@ -335,6 +341,19 @@ async def score_session(request: SessionRequest, background_tasks: BackgroundTas
             audit_id=f"error_{int(time.time())}",
             latency_ms=0.0
         )
+
+
+chatbot_agent = ChatbotAgent()
+
+
+@app.post("/api/v1/chat", tags=["Chatbot"])
+async def chatbot_reply(req: ChatRequest):
+    """Chatbot endpoint to answer checkout questions dynamically."""
+    try:
+        reply = await chatbot_agent.get_response(req.message, req.context)
+        return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/v1/score", tags=["Scoring"])

@@ -16,8 +16,8 @@ const getOrCreateCart = async (user) => {
   return cart;
 };
 
-// Calls the existing Python ML service in real time whenever cart state changes
 const scoreCartWithML = async (cart, user) => {
+  await cart.populate("items.product");
   const cartValue = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
   const sessionDurationSec = (Date.now() - new Date(cart.sessionStart).getTime()) / 1000;
 
@@ -36,7 +36,8 @@ const scoreCartWithML = async (cart, user) => {
     cart_items: cart.items.map(i => ({
       name: i.name,
       price: i.price,
-      quantity: i.quantity
+      quantity: i.quantity,
+      specifications: i.product ? Object.fromEntries(i.product.specifications || new Map()) : {}
     })),
   };
 
@@ -183,6 +184,39 @@ export const getUserNotifications = async (req, res) => {
   }
 };
 
-export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal, heartbeat, goodbye, getUserNotifications };
+export const chat = async (req, res) => {
+  try {
+    const { message, sessionId } = req.body;
+    const cart = await getOrCreateCart(req.user);
+    await cart.populate("items.product");
+    
+    const context = {
+      sessionId: sessionId || cart.sessionId,
+      user_name: req.user.name,
+      cart_value: cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      cart_items: cart.items.map(i => ({
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        specifications: i.product ? Object.fromEntries(i.product.specifications || new Map()) : {}
+      })),
+      payment_failures: cart.paymentFailures,
+      form_field_errors: cart.formFieldErrors
+    };
+
+    const resp = await fetch(`${ML_URL}/api/v1/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, context })
+    });
+    if (!resp.ok) throw new Error(`ML service responded ${resp.status}`);
+    const data = await resp.json();
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ message: "Chat service unavailable", detail: err.message });
+  }
+};
+
+export default { getCart, addToCart, updateCartItem, removeFromCart, trackSignal, heartbeat, goodbye, getUserNotifications, chat };
 
 
