@@ -366,7 +366,31 @@ async def score_session_v1(session: SessionData, background_tasks: BackgroundTas
             session_dict["original_cart_value"] = session_dict["cart_value"]
         
         result = await orchestrator.process_session(session_dict)
-        
+
+        # Cooldown guardrail: 10 minutes (600 seconds) for identical user action
+        action = result.get("action", {})
+        action_type = action.get("action_type", "DO_NOTHING")
+
+        if action_type not in ["DO_NOTHING", None]:
+            user_id = session_dict.get("user_id") or session_dict.get("session_id", "unknown")
+            cache_key = (user_id, action_type)
+            now = time.time()
+            cooldown_period = 10 * 60  # 10 minutes
+
+            if cache_key in notification_service.last_sent_cache:
+                last_sent = notification_service.last_sent_cache[cache_key]
+                if now - last_sent < cooldown_period:
+                    remaining = int(cooldown_period - (now - last_sent))
+                    print(f"[COOLDOWN DECREE] Downgrading {action_type} to DO_NOTHING for {user_id}. {remaining}s left.")
+                    result["action"] = {
+                        "action_type": "DO_NOTHING",
+                        "channel": "DO_NOTHING",
+                        "message": "",
+                        "discount_amount": 0,
+                        "discount_type": "NONE",
+                        "reasoning": f"Action {action_type} is in a 10-minute cooldown period ({remaining}s remaining)."
+                    }
+
         # Audit log in background
         background_tasks.add_task(audit_service.log_decision, result, session_dict)
         
