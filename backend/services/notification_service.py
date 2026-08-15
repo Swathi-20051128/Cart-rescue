@@ -18,6 +18,7 @@ class NotificationService:
     def __init__(self):
         self.reload_config()
         self.wpp_token_cache = None
+        self.last_sent_cache = {}
 
     def reload_config(self):
         """Reload configuration from environment variables."""
@@ -36,6 +37,20 @@ class NotificationService:
         if not message or action_type == "DO_NOTHING":
             print("[NOTIFICATION] Skipped: Action is DO_NOTHING or message is empty.")
             return {"status": "skipped", "reason": "no action or DO_NOTHING"}
+
+        # Cooldown guardrail: 10 minutes (600 seconds) for identical user action
+        import time
+        user_id = session_data.get("user_id") or session_data.get("session_id", "unknown")
+        cache_key = (user_id, action_type)
+        now = time.time()
+        cooldown_period = 10 * 60  # 10 minutes
+
+        if cache_key in self.last_sent_cache:
+            last_sent = self.last_sent_cache[cache_key]
+            if now - last_sent < cooldown_period:
+                remaining = int(cooldown_period - (now - last_sent))
+                print(f"[NOTIFICATION COOL DOWN] Cooldown active for {cache_key}. Remaining: {remaining}s. Skipping dispatch.")
+                return {"status": "skipped", "reason": "cooldown_active", "cooldown_remaining_sec": remaining}
 
         user_phone = (
             session_data.get("user_phone")
@@ -82,6 +97,9 @@ class NotificationService:
 
         # 3. In-App alert / Dashboard (naturally logged via audit)
         results["in_app"] = {"status": "logged", "message": message}
+
+        # Record dispatch timestamp to enforce the 10-minute cooldown
+        self.last_sent_cache[cache_key] = now
 
         return {
             "status": "dispatched",
