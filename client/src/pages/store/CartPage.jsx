@@ -268,7 +268,7 @@ const CartPage = () => {
               </div>
 
               {cart.items.map((item, idx) => (
-                <div key={item.product} style={{
+                <div key={item.product._id || item.product} style={{
                   display: "grid", gridTemplateColumns: "80px 1fr auto",
                   gap: 16, padding: "18px 20px",
                   borderBottom: idx < cart.items.length - 1 ? "1px solid var(--border)" : "none",
@@ -288,11 +288,11 @@ const CartPage = () => {
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {/* +/− stepper */}
                       <div style={{ display: "flex", alignItems: "center", border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-                        <button onClick={() => updateQty(item.product, item.quantity - 1)} disabled={loading} style={{ width: 32, height: 32, background: "var(--bg-alt)", color: "var(--text)", border: "none", cursor: "pointer", fontSize: 16, fontFamily: "var(--font-body)" }}>−</button>
+                        <button onClick={() => updateQty(item.product._id || item.product, item.quantity - 1)} disabled={loading} style={{ width: 32, height: 32, background: "var(--bg-alt)", color: "var(--text)", border: "none", cursor: "pointer", fontSize: 16, fontFamily: "var(--font-body)" }}>−</button>
                         <span style={{ width: 36, textAlign: "center", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{item.quantity}</span>
-                        <button onClick={() => updateQty(item.product, item.quantity + 1)} disabled={loading} style={{ width: 32, height: 32, background: "var(--bg-alt)", color: "var(--text)", border: "none", cursor: "pointer", fontSize: 16, fontFamily: "var(--font-body)" }}>+</button>
+                        <button onClick={() => updateQty(item.product._id || item.product, item.quantity + 1)} disabled={loading} style={{ width: 32, height: 32, background: "var(--bg-alt)", color: "var(--text)", border: "none", cursor: "pointer", fontSize: 16, fontFamily: "var(--font-body)" }}>+</button>
                       </div>
-                      <button onClick={() => removeItem(item.product)} disabled={loading} style={{ fontSize: 11, color: "#EF4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "var(--font-body)" }}>
+                      <button onClick={() => removeItem(item.product._id || item.product)} disabled={loading} style={{ fontSize: 11, color: "#EF4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "var(--font-body)" }}>
                         🗑 Remove
                       </button>
                     </div>

@@ -83,12 +83,15 @@ const getProductIdStr = (productField) => {
 };
 
 export const addToCart = async (req, res) => {
-  const { productId, quantity = 1 } = req.body;
+  let { productId, quantity = 1 } = req.body;
+  if (productId && typeof productId === "object") {
+    productId = productId._id;
+  }
   const product = await Product.findById(productId);
   if (!product) return res.status(404).json({ message: "Product not found" });
 
   const cart = await getOrCreateCart(req.user);
-  const existing = cart.items.find((i) => getProductIdStr(i.product) === productId);
+  const existing = cart.items.find((i) => getProductIdStr(i.product) === productId.toString());
   if (existing) {
     existing.quantity += quantity;
   } else {
@@ -108,13 +111,16 @@ export const addToCart = async (req, res) => {
 };
 
 export const updateCartItem = async (req, res) => {
-  const { productId, quantity } = req.body;
+  let { productId, quantity } = req.body;
+  if (productId && typeof productId === "object") {
+    productId = productId._id;
+  }
   const cart = await getOrCreateCart(req.user);
-  const item = cart.items.find((i) => getProductIdStr(i.product) === productId);
+  const item = cart.items.find((i) => getProductIdStr(i.product) === productId.toString());
   if (!item) return res.status(404).json({ message: "Item not in cart" });
 
   if (quantity <= 0) {
-    cart.items = cart.items.filter((i) => getProductIdStr(i.product) !== productId);
+    cart.items = cart.items.filter((i) => getProductIdStr(i.product) !== productId.toString());
   } else {
     item.quantity = quantity;
   }
