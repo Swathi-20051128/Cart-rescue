@@ -86,7 +86,7 @@ class AuditService:
         ]
         for entry in dummy_entries:
             entry["id"] = self._next_id()
-            entry["timestamp"] = datetime.utcnow().isoformat()
+            entry["timestamp"] = datetime.utcnow().isoformat() + "Z"
             entry["outcome"] = "PENDING"
             self.audit_log.insert_one(entry)
 
@@ -99,7 +99,7 @@ class AuditService:
 
         doc = dict(
             id=self._next_id(),
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.utcnow().isoformat() + "Z",
             session_id=result.get("session_id", ""),
             user_id=session_data.get("user_id", ""),
             risk_score=result.get("risk_score", 0),
@@ -216,7 +216,7 @@ class AuditService:
         """Record actual conversion outcome for a session."""
         self.session_outcomes.update_one(
             {"session_id": session_id},
-            {"$set": {"actual_outcome": outcome, "recorded_at": datetime.utcnow().isoformat()}},
+            {"$set": {"actual_outcome": outcome, "recorded_at": datetime.utcnow().isoformat() + "Z"}},
             upsert=True,
         )
         self.audit_log.update_many({"session_id": session_id}, {"$set": {"outcome": outcome}})

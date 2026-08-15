@@ -110,7 +110,7 @@ export default function Notifications() {
     } else if (activeTab === "mail") {
       matchesChannel = ch === "EMAIL";
     } else if (activeTab === "dashboard") {
-      matchesChannel = ch === "IN_APP" || ch === "DASHBOARD" || !l.channel;
+      matchesChannel = ch !== "EMAIL" && ch !== "WHATSAPP" && ch !== "SMS";
     }
 
     if (!matchesChannel) return false;
