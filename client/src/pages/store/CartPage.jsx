@@ -129,7 +129,7 @@ function AIOfferBanner({ risk, onDismiss }) {
 
   const action     = risk?.action || {};
   const actionType = action.action_type || action.action || "";
-  const hasAction  = actionType && actionType !== "DO_NOTHING";
+  const hasAction  = actionType && actionType !== "DO_NOTHING" && !risk?.cooldown_active;
   const message    = action.message || action.action_message || "";
   const discount   = action.discount_amount || 0;
 

@@ -102,6 +102,7 @@ export default function Notifications() {
 
   // Filter logs by channel, search term, date, and cause
   const filteredLogs = logs.filter((l) => {
+    if (l.cooldown_active) return false;
     // Exclude decisions where no recovery action was taken
     const act = (l.action_type || "").toUpperCase();
     if (act === "DO_NOTHING" || act === "NONE" || !act) return false;

@@ -117,6 +117,7 @@ class AuditService:
             signals_json=result.get("signals", {}),
             full_result_json=result,
             outcome="PENDING",
+            cooldown_active=bool(result.get("cooldown_active", False)),
         )
         self.audit_log.insert_one(doc)
 

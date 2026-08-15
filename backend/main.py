@@ -370,6 +370,7 @@ async def score_session_v1(session: SessionData, background_tasks: BackgroundTas
         # Cooldown guardrail: 10 minutes (600 seconds) for identical user action
         action = result.get("action", {})
         action_type = action.get("action_type", "DO_NOTHING")
+        is_cooldown_active = False
 
         if action_type not in ["DO_NOTHING", None]:
             user_id = session_dict.get("user_id") or session_dict.get("session_id", "unknown")
@@ -380,31 +381,28 @@ async def score_session_v1(session: SessionData, background_tasks: BackgroundTas
             if cache_key in notification_service.last_sent_cache:
                 last_sent = notification_service.last_sent_cache[cache_key]
                 if now - last_sent < cooldown_period:
+                    is_cooldown_active = True
                     remaining = int(cooldown_period - (now - last_sent))
-                    print(f"[COOLDOWN DECREE] Downgrading {action_type} to DO_NOTHING for {user_id}. {remaining}s left.")
-                    result["action"] = {
-                        "action_type": "DO_NOTHING",
-                        "channel": "DO_NOTHING",
-                        "message": "",
-                        "discount_amount": 0,
-                        "discount_type": "NONE",
-                        "reasoning": f"Action {action_type} is in a 10-minute cooldown period ({remaining}s remaining)."
-                    }
+                    print(f"[COOLDOWN DECREE] Cooldown active for {user_id} and action {action_type}. {remaining}s left.")
+
+        result["cooldown_active"] = is_cooldown_active
 
         # Audit log in background
         background_tasks.add_task(audit_service.log_decision, result, session_dict)
         
-        # Notification if action recommended
-        action = result.get("action", {})
+        # Notification if action recommended and not in cooldown
         has_contact = bool(
             session_dict.get("user_email")
             or session_dict.get("user_phone")
             or session_dict.get("user_mobile")
             or session_dict.get("user_whatsapp")
         )
-        if action.get("action_type") not in ["DO_NOTHING", None] and has_contact:
-            notif_res = await notification_service.send_notification(session_dict, action)
-            result["notification_result"] = notif_res
+        if action_type not in ["DO_NOTHING", None] and not is_cooldown_active:
+            if has_contact:
+                notif_res = await notification_service.send_notification(session_dict, action)
+                result["notification_result"] = notif_res
+        elif is_cooldown_active:
+            result["notification_result"] = {"status": "skipped", "reason": "cooldown_active"}
         
         latency = (time.time() - start) * 1000
         result["api_latency_ms"] = round(latency, 2)

@@ -55,7 +55,7 @@ const scoreCartWithML = async (cart, user) => {
 
     const action = result.action || {};
     const type = action.action_type || action.action;
-    if (type && type !== "DO_NOTHING") {
+    if (type && type !== "DO_NOTHING" && !result.cooldown_active) {
       cart.recoveryOffer = {
         actionType: type,
         channel: action.channel || "IN_APP",

@@ -11,6 +11,7 @@ export default function UserNotifications() {
       .then((res) => {
         const logs = res.data.logs || res.data || [];
         const activeNotifs = logs.filter(n => {
+          if (n.cooldown_active) return false;
           const actionType = n.action_type || n.full_result_json?.action?.action_type || "";
           return actionType && actionType !== "DO_NOTHING" && actionType !== "NONE";
         });
