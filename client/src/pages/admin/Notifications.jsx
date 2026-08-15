@@ -102,6 +102,10 @@ export default function Notifications() {
 
   // Filter logs by channel, search term, date, and cause
   const filteredLogs = logs.filter((l) => {
+    // Exclude decisions where no recovery action was taken
+    const act = (l.action_type || "").toUpperCase();
+    if (act === "DO_NOTHING" || act === "NONE" || !act) return false;
+
     // 1. Channel Filter
     const ch = (l.channel || "").toUpperCase();
     let matchesChannel = false;
