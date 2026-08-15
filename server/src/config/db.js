@@ -1,11 +1,6 @@
 import mongoose from "mongoose";
 import dns from "dns";
 
-// Force a public DNS resolver for the mongodb+srv:// lookup — Node's resolver
-// can fail SRV queries against IPv6 link-local / router DNS servers even when
-// the OS resolver (nslookup) succeeds.
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
-
 export const connectDB = async () => {
   const uri = process.env.MONGO_URI || process.env.DATABASE_URL;
   if (!uri) {
@@ -13,10 +8,19 @@ export const connectDB = async () => {
     process.exit(1);
   }
   try {
+    // Force a public DNS resolver temporarily for the mongodb+srv:// lookup
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
     await mongoose.connect(uri, { dbName: process.env.MONGO_DB_NAME || "cartguard" });
     console.log("[MongoDB] Connected:", mongoose.connection.host);
+
+    // Reset back to default system resolvers so localhost and 127.0.0.1 resolve perfectly for fetch calls
+    dns.setServers([]);
   } catch (err) {
     console.error("[MongoDB] Connection error:", err.message);
+    try {
+      dns.setServers([]);
+    } catch (_) {}
     process.exit(1);
   }
 };
