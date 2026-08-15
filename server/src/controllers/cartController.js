@@ -32,6 +32,7 @@ const scoreCartWithML = async (cart, user) => {
     payment_failures: cart.paymentFailures,
     form_field_errors: cart.formFieldErrors,
     user_email: user.email,
+    user_phone: user.phone,
     email_opt_in: true,
     cart_items: cart.items.map(i => ({
       name: i.name,

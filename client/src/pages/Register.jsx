@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "user", adminKey: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", role: "user", adminKey: "" });
   const [error, setError] = useState("");
 
   const submit = async (e) => {
@@ -49,6 +49,8 @@ const Register = () => {
             <input placeholder="Your name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             <label className="field-label">Email</label>
             <input type="email" placeholder="name@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <label className="field-label">Mobile Number</label>
+            <input placeholder="e.g. 6305768615" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
             <label className="field-label">Password</label>
             <input type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
 

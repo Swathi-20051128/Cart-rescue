@@ -3,7 +3,7 @@ import generateToken from "../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "name, email, password are required" });
     }
@@ -15,13 +15,14 @@ export const registerUser = async (req, res) => {
     const assignedRole =
       role === "admin" && req.body.adminKey === process.env.ADMIN_SIGNUP_KEY ? "admin" : "user";
 
-    const user = await User.create({ name, email, password, role: assignedRole });
+    const user = await User.create({ name, email, password, role: assignedRole, phone: phone || "" });
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
+      phone: user.phone,
       token: generateToken(user._id, user.role),
     });
   } catch (err) {
@@ -40,6 +41,7 @@ export const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
         token: generateToken(user._id, user.role),
       });
     }
