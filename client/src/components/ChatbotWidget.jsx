@@ -13,10 +13,6 @@ export default function ChatbotWidget() {
   const [pulse, setPulse] = useState(false);
   const scrollRef = useRef(null);
 
-  if (!user || user.role !== "user") {
-    return null;
-  }
-
   // Automatically pulse/giggle the chatbot trigger button if payment failures or errors occur!
   useEffect(() => {
     const handleSignal = () => {
@@ -56,6 +52,10 @@ export default function ChatbotWidget() {
   const handleChipClick = (phrase) => {
     handleSend(phrase);
   };
+
+  if (!user || user.role !== "user") {
+    return null;
+  }
 
   return (
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, fontFamily: "inherit" }}>
