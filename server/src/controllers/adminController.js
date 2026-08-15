@@ -3,7 +3,7 @@ import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 
-const ML_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
+const ML_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
 
 const proxyGet = async (path) => {
   const resp = await fetch(`${ML_URL}${path}`);

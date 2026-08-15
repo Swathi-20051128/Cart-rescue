@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import Cart from "../models/Cart.js";
 import Product from "../models/Product.js";
 
-const ML_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
+const ML_URL = process.env.ML_SERVICE_URL || "http://127.0.0.1:8000";
 
 const getOrCreateCart = async (user) => {
   let cart = await Cart.findOne({ user: user._id });
