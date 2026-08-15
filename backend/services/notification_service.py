@@ -17,6 +17,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env
 class NotificationService:
     def __init__(self):
         self.reload_config()
+        self.wpp_token_cache = None
 
     def reload_config(self):
         """Reload configuration from environment variables."""
@@ -166,7 +167,7 @@ class NotificationService:
                 )
                 print(f"[EMAIL SENT] Status {response.status_code} to {to_email} | Response: {response.text}")
                 return {
-                    "status": "sent" if response.status_code == 200 else "failed",
+                    "status": "sent" if response.status_code in [200, 201] else "failed",
                     "channel": "email",
                     "status_code": response.status_code,
                     "response": response.text
@@ -174,6 +175,31 @@ class NotificationService:
         except Exception as e:
             print(f"[EMAIL ERROR] {str(e)}")
             return {"status": "error", "error": str(e)}
+
+    async def get_wpp_token(self, wpp_url: str, session: str) -> str:
+        """Dynamically fetch or refresh WPPConnect JWT authorization token."""
+        if self.wpp_token_cache:
+            return self.wpp_token_cache
+
+        env_token = os.getenv("WPPCONNECT_TOKEN", "")
+        if env_token:
+            self.wpp_token_cache = env_token
+            return env_token
+
+        secret_key = "THISISMYSECURETOKEN"
+        url = f"{wpp_url.rstrip('/')}/api/{session}/{secret_key}/generate-token"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, timeout=5.0)
+                if resp.status_code in [200, 201]:
+                    data = resp.json()
+                    token = data.get("token")
+                    if token:
+                        self.wpp_token_cache = token
+                        return token
+        except Exception as e:
+            print(f"[WPPCONNECT TOKEN EXCEPTION] Failed to generate token: {str(e)}")
+        return ""
 
     async def send_sms(
         self,
@@ -188,7 +214,7 @@ class NotificationService:
         if channel == "WHATSAPP":
             wpp_url = os.getenv("WPPCONNECT_API_URL", "")
             wpp_session = os.getenv("WPPCONNECT_SESSION", "cartguard")
-            wpp_token = os.getenv("WPPCONNECT_TOKEN", "")
+            wpp_token = await self.get_wpp_token(wpp_url, wpp_session)
             
             if wpp_url and formatted_num:
                 cleaned_phone = formatted_num.replace("+", "")
